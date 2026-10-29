@@ -1,0 +1,662 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import { Student, VerificationRequest, StudentConsentPreferences, AuditLogEntry } from '../types';
+import { generateHash, buildCredentialCanonicalPayload } from '../utils/verificationEngine';
+
+export const INITIAL_STUDENT_PREFERENCES: Record<string, StudentConsentPreferences> = {
+  '2990 9583 2586': {
+    autoApproveVettedEmployers: false,
+    notifyViaSMS: true,
+    notifyViaEmail: true,
+    requireOtpForApproval: true,
+    defaultValidityHours: 24,
+    blacklistedEmployers: ['Unverified Data Brokers LLC'],
+    allowedCredentials: ['DEGREE', 'MARKSHEET', 'AICTE_APPROVAL', 'ABC_TRANSCRIPT'],
+    dataPrivacyVersion: 'DPDP Act 2023 / Section 6',
+  },
+  '8686 2578 1740': {
+    autoApproveVettedEmployers: true,
+    notifyViaSMS: true,
+    notifyViaEmail: false,
+    requireOtpForApproval: false,
+    defaultValidityHours: 72,
+    blacklistedEmployers: [],
+    allowedCredentials: ['DEGREE', 'ABC_TRANSCRIPT'],
+    dataPrivacyVersion: 'DPDP Act 2023 / Section 6',
+  },
+};
+
+export const INITIAL_VERIFICATION_REQUESTS: VerificationRequest[] = [
+  {
+    id: 'BGV-2026-9041',
+    employerId: 'EMP-TCS',
+    employerName: 'Tata Consultancy Services',
+    verifierName: 'Kavitha Ramachandran (Demo)',
+    verifierRole: 'Senior HR Talent Onboarding',
+    verifierEmail: 'kavitha.demo@tcs.example.com',
+    verifierIp: '49.207.180.12',
+    studentApaarId: '2990 9583 2586',
+    studentName: 'Abinaya S',
+    requestedCredentialTypes: ['DEGREE', 'MARKSHEET', 'AICTE_APPROVAL'],
+    purpose: 'Pre-Employment Background Verification for Systems Engineer (Job Req #TCS-CHN-8820)',
+    requestedAt: '2026-10-25T04:30:00Z',
+    consentExpiresAt: '2026-10-27T04:30:00Z',
+    status: 'PENDING_STUDENT_CONSENT',
+    scopeOfAccess: ['IDENTITY', 'ACADEMIC_MARKS', 'DIGITAL_SIGNATURE'],
+    auditTrailId: 'AUDIT-BGV-9041',
+  },
+  {
+    id: 'BGV-2026-8812',
+    employerId: 'EMP-ZOHO',
+    employerName: 'Zoho Corporation',
+    verifierName: 'Suresh Balasubramanian (Demo)',
+    verifierRole: 'Head of Technical Recruiting',
+    verifierEmail: 'suresh.demo@zoho.example.com',
+    verifierIp: '14.143.45.89',
+    studentApaarId: '2990 9583 2586',
+    studentName: 'Abinaya S',
+    requestedCredentialTypes: ['DEGREE', 'ABC_TRANSCRIPT'],
+    purpose: 'Member Technical Staff Onboarding (Full Stack Team, Estancia Campus)',
+    requestedAt: '2026-10-24T09:15:00Z',
+    consentExpiresAt: '2026-10-31T09:15:00Z',
+    status: 'VERIFIED',
+    consentGrantedAt: '2026-10-24T10:02:14Z',
+    scopeOfAccess: ['IDENTITY', 'ACADEMIC_MARKS', 'DIGITAL_SIGNATURE', 'FULL_TRANSCRIPT'],
+    backendValidation: {
+      repositoryChecked: 'AICTE Central Repository',
+      signatureAlgorithm: 'RSA-SHA256',
+      certificateSerial: 'NAD-AICTE-PKI-2023-74198E',
+      issuerCA: 'AICTE Central Root CA - National Academic Depository (NAD)',
+      sha256Digest: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+      verifiedAt: '2026-10-24T10:02:45Z',
+      isTampered: false,
+      networkLatencyMs: 245,
+    },
+    auditTrailId: 'AUDIT-BGV-8812',
+  },
+  {
+    id: 'BGV-2026-8109',
+    employerId: 'EMP-COGNIZANT',
+    employerName: 'Cognizant Technology Solutions',
+    verifierName: 'Deepak Varma (Demo)',
+    verifierRole: 'Associate Director - Human Capital',
+    verifierEmail: 'deepak.demo@cognizant.example.com',
+    verifierIp: '115.240.12.90',
+    studentApaarId: '2990 9583 2586',
+    studentName: 'Abinaya S',
+    requestedCredentialTypes: ['DEGREE'],
+    purpose: 'Associate Software Engineer Offer Clearance',
+    requestedAt: '2026-10-20T11:00:00Z',
+    consentExpiresAt: '2026-10-22T11:00:00Z',
+    status: 'CONSENT_REVOKED',
+    consentGrantedAt: '2026-10-20T11:45:00Z',
+    consentRevokedAt: '2026-10-22T08:30:00Z',
+    revocationReason: 'Offer declined by candidate; requested data purge under DPDP Act 2023 Section 6(4)',
+    scopeOfAccess: ['IDENTITY', 'ACADEMIC_MARKS'],
+    auditTrailId: 'AUDIT-BGV-8109',
+  },
+  {
+    id: 'BGV-2026-7901',
+    employerId: 'EMP-INFOSYS',
+    employerName: 'Infosys Limited',
+    verifierName: 'Priya Sundaram (Demo)',
+    verifierRole: 'Campus Hiring Operations',
+    verifierEmail: 'priya.demo@infosys.example.com',
+    verifierIp: '182.73.19.4',
+    studentApaarId: '8686 2578 1740',
+    studentName: 'Karthik M',
+    requestedCredentialTypes: ['DEGREE', 'ABC_TRANSCRIPT'],
+    purpose: 'Specialist Programmer Induction (Mysore DC Batch 2026-B)',
+    requestedAt: '2026-10-24T14:20:00Z',
+    consentExpiresAt: '2026-10-27T14:20:00Z',
+    status: 'VERIFIED',
+    consentGrantedAt: '2026-10-24T14:25:00Z',
+    scopeOfAccess: ['IDENTITY', 'ACADEMIC_MARKS', 'DIGITAL_SIGNATURE'],
+    backendValidation: {
+      repositoryChecked: 'DigiLocker / NAD',
+      signatureAlgorithm: 'RSA-SHA256',
+      certificateSerial: 'NAD-ANNAUNIV-PKI-2023-44102',
+      issuerCA: 'Anna University Examination Board PKI Authority',
+      sha256Digest: '7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069',
+      verifiedAt: '2026-10-24T14:25:30Z',
+      isTampered: false,
+      networkLatencyMs: 310,
+    },
+    auditTrailId: 'AUDIT-BGV-7901',
+  },
+];
+
+export const INITIAL_AUDIT_LOGS: AuditLogEntry[] = [
+  {
+    id: 'AUDIT-LOG-101',
+    timestamp: '2026-10-25T04:30:00Z',
+    requestId: 'BGV-2026-9041',
+    studentApaarId: '2990 9583 2586',
+    actor: 'Tata Consultancy Services (Kavitha Ramachandran - IP: 49.207.180.12)',
+    actorType: 'EMPLOYER',
+    action: 'REQUEST_INITIATED',
+    details: 'Submitted background verification request for APAAR ID 2990 9583 2586 (Degree, Marksheet, AICTE Approval). Status: PENDING_STUDENT_CONSENT',
+    sha256Fingerprint: generateHash('LOG-101-INITIATED-TCS-299095832586'),
+    level: 'INFO',
+  },
+  {
+    id: 'AUDIT-LOG-102',
+    timestamp: '2026-10-25T04:30:05Z',
+    requestId: 'BGV-2026-9041',
+    studentApaarId: '2990 9583 2586',
+    actor: 'APAAR Notification Gateway (SMS + In-App Push)',
+    actorType: 'SYSTEM',
+    action: 'NOTIFICATION_DELIVERED',
+    details: 'Dispatched encrypted consent request push notification to student mobile (ending in 0003) and Student Portal dashboard.',
+    sha256Fingerprint: generateHash('LOG-102-NOTIFICATION-DELIVERED'),
+    level: 'INFO',
+  },
+  {
+    id: 'AUDIT-LOG-103',
+    timestamp: '2026-10-24T10:02:14Z',
+    requestId: 'BGV-2026-8812',
+    studentApaarId: '2990 9583 2586',
+    actor: 'Student: Abinaya S (Authenticated via Aadhaar OTP)',
+    actorType: 'STUDENT',
+    action: 'CONSENT_GRANTED',
+    details: 'Student granted 7-day scoped consent to Zoho Corporation for Degree Certificate & Academic Bank of Credits (ABC) validation.',
+    sha256Fingerprint: generateHash('LOG-103-CONSENT-GRANTED-ZOHO'),
+    level: 'SUCCESS',
+  },
+  {
+    id: 'AUDIT-LOG-104',
+    timestamp: '2026-10-24T10:02:30Z',
+    requestId: 'BGV-2026-8812',
+    studentApaarId: '2990 9583 2586',
+    actor: 'AICTE Central Academic Depository Gateway',
+    actorType: 'AICTE_GATEWAY',
+    action: 'AICTE_REPOSITORY_QUERIED',
+    details: 'Resolved student credential bundle URI `in.gov.digilocker.annauniv.deg.2023.299095832586` against National Academic Depository master ledger.',
+    sha256Fingerprint: generateHash('LOG-104-AICTE-QUERY'),
+    level: 'INFO',
+  },
+  {
+    id: 'AUDIT-LOG-105',
+    timestamp: '2026-10-24T10:02:45Z',
+    requestId: 'BGV-2026-8812',
+    studentApaarId: '2990 9583 2586',
+    actor: 'Node.js PKI Cryptographic Engine',
+    actorType: 'SYSTEM',
+    action: 'DIGITAL_SIGNATURE_VERIFIED',
+    details: 'Verified X.509 RSA-SHA256 digital signature from AICTE Central Root CA. Checksum matched 100%. Status transitioned to VERIFIED.',
+    sha256Fingerprint: generateHash('LOG-105-SIGNATURE-VERIFIED'),
+    level: 'SUCCESS',
+  },
+  {
+    id: 'AUDIT-LOG-106',
+    timestamp: '2026-10-22T08:30:00Z',
+    requestId: 'BGV-2026-8109',
+    studentApaarId: '2990 9583 2586',
+    actor: 'Student: Abinaya S',
+    actorType: 'STUDENT',
+    action: 'CONSENT_REVOKED',
+    details: 'Candidate invoked DPDP Act Right to Revoke Consent. Access to Cognizant revoked immediately. Employer verification token invalidated.',
+    sha256Fingerprint: generateHash('LOG-106-CONSENT-REVOKED-COGNIZANT'),
+    level: 'ALERT',
+  },
+];
+
+// Synthetic demo students with canonical SHA-256 credential hashes
+const STUDENTS_SAMPLE: Student[] = [
+  {
+    apaarId: '1551 6988 7453',
+    pen: '20210984123',
+    name: 'Abinaya A',
+    dob: '10 Mar 2010',
+    gender: 'Female',
+    currentInstitution: 'Govt Higher Secondary School, Gobichettipalayam',
+    stage: 'Higher Secondary',
+    gradeOrClass: 'Class 11',
+    district: 'Erode',
+    status: 'Active',
+    aadhaarMismatch: false,
+    consentPending: false,
+    hasDigilockerAccount: true,
+    digilockerDocumentsCount: 2,
+    abcCreditsBalance: 0,
+    contactEmail: 'abinaya.a10@student.example.edu.in',
+    contactPhone: '+91 90000 00001',
+    credentials: [],
+  },
+  {
+    apaarId: '2753 4663 1937',
+    pen: '20209817451',
+    name: 'Abinaya S',
+    dob: '03 Sept 2011',
+    gender: 'Female',
+    currentInstitution: 'Govt Higher Secondary School, Ambasamudram',
+    stage: 'Left education',
+    district: 'Tirunelveli',
+    status: 'Dropped out',
+    aadhaarMismatch: true,
+    consentPending: false,
+    hasDigilockerAccount: false,
+    digilockerDocumentsCount: 0,
+    abcCreditsBalance: 0,
+    contactEmail: 'abinaya.tvl@student.example.edu.in',
+    contactPhone: '+91 90000 00002',
+    credentials: [],
+  },
+  {
+    apaarId: '2990 9583 2586',
+    pen: '20194817290',
+    name: 'Abinaya S',
+    dob: '19 Nov 2003',
+    gender: 'Female',
+    currentInstitution: 'Institute of Technology, Attur',
+    stage: 'Graduated',
+    district: 'Salem',
+    status: 'Graduated',
+    aadhaarMismatch: false,
+    consentPending: false,
+    hasDigilockerAccount: true,
+    digilockerDocumentsCount: 4,
+    abcCreditsBalance: 164,
+    contactEmail: 'abinaya.attur@student.example.edu.in',
+    contactPhone: '+91 90000 00003',
+    credentials: [
+      {
+        id: 'CRED-ATTUR-DEG-01',
+        type: 'DEGREE',
+        title: 'Bachelor of Technology (B.Tech) - Information Technology',
+        issuingInstitution: 'Institute of Technology, Attur (Affiliated to Anna University)',
+        issuingAuthority: 'Anna University & AICTE',
+        yearOfPassing: 2023,
+        cgpaOrPercentage: '8.82 CGPA (First Class with Distinction)',
+        specialization: 'Information Technology & Cloud Systems',
+        digilockerUri: 'in.gov.digilocker.annauniv.deg.2023.299095832586',
+        aicteApprovalNumber: 'AICTE-TN-ENG-2019-8812',
+        sha256Hash: generateHash(
+          buildCredentialCanonicalPayload({
+            id: 'CRED-ATTUR-DEG-01',
+            title: 'Bachelor of Technology (B.Tech) - Information Technology',
+            issuingInstitution: 'Institute of Technology, Attur (Affiliated to Anna University)',
+            yearOfPassing: 2023,
+            cgpaOrPercentage: '8.82 CGPA (First Class with Distinction)',
+            aicteApprovalNumber: 'AICTE-TN-ENG-2019-8812',
+          })
+        ),
+        digitalSignature: 'SIG-PKI-RSA-AICTE-0912448A8F432A9C1',
+        issuerCertificateSerial: 'NAD-AICTE-PKI-2023-74198E',
+        timestamp: '2023-07-15T10:30:00Z',
+      },
+      {
+        id: 'CRED-ATTUR-MARK-01',
+        type: 'MARKSHEET',
+        title: 'Consolidated Statement of Grades (Semesters 1-8)',
+        issuingInstitution: 'Institute of Technology, Attur',
+        issuingAuthority: 'Controller of Examinations, Anna University',
+        yearOfPassing: 2023,
+        cgpaOrPercentage: '8.82 CGPA / Credits: 164 earned',
+        specialization: 'Information Technology',
+        digilockerUri: 'in.gov.digilocker.annauniv.csg.2023.299095832586',
+        aicteApprovalNumber: 'AICTE-TN-ENG-2019-8812',
+        sha256Hash: generateHash(
+          buildCredentialCanonicalPayload({
+            id: 'CRED-ATTUR-MARK-01',
+            title: 'Consolidated Statement of Grades (Semesters 1-8)',
+            issuingInstitution: 'Institute of Technology, Attur',
+            yearOfPassing: 2023,
+            cgpaOrPercentage: '8.82 CGPA / Credits: 164 earned',
+            aicteApprovalNumber: 'AICTE-TN-ENG-2019-8812',
+          })
+        ),
+        digitalSignature: 'SIG-PKI-RSA-AU-COE-772190B384',
+        issuerCertificateSerial: 'NAD-AU-PKI-2023-88210',
+        timestamp: '2023-07-20T14:15:00Z',
+      },
+      {
+        id: 'CRED-ATTUR-AICTE-01',
+        type: 'AICTE_APPROVAL',
+        title: 'AICTE National Approved Engineering Graduate Registry',
+        issuingInstitution: 'All India Council for Technical Education (AICTE)',
+        issuingAuthority: 'Ministry of Education, Govt of India',
+        yearOfPassing: 2023,
+        cgpaOrPercentage: 'Approved Program Code: 1-7298311',
+        specialization: 'B.Tech IT (Tier-1 Accredited)',
+        digilockerUri: 'in.gov.aicte.registry.cert.2023.299095832586',
+        aicteApprovalNumber: 'AICTE-TN-ENG-2019-8812',
+        sha256Hash: generateHash(
+          buildCredentialCanonicalPayload({
+            id: 'CRED-ATTUR-AICTE-01',
+            title: 'AICTE National Approved Engineering Graduate Registry',
+            issuingInstitution: 'All India Council for Technical Education (AICTE)',
+            yearOfPassing: 2023,
+            cgpaOrPercentage: 'Approved Program Code: 1-7298311',
+            aicteApprovalNumber: 'AICTE-TN-ENG-2019-8812',
+          })
+        ),
+        digitalSignature: 'SIG-PKI-RSA-AICTE-HQ-NEWDELHI-99812A',
+        issuerCertificateSerial: 'NAD-AICTE-PKI-2023-99812A',
+        timestamp: '2023-08-01T08:00:00Z',
+      },
+      {
+        id: 'CRED-ATTUR-ABC-01',
+        type: 'ABC_TRANSCRIPT',
+        title: 'Academic Bank of Credits (ABC) Digital Ledger Account',
+        issuingInstitution: 'Academic Bank of Credits, Ministry of Education',
+        issuingAuthority: 'National Educational Technology Forum (NETF)',
+        yearOfPassing: 2023,
+        cgpaOrPercentage: '164 Valid Verified Credits Transferred',
+        specialization: 'Engineering & Technology',
+        digilockerUri: 'in.gov.abc.transcript.2023.299095832586',
+        aicteApprovalNumber: 'ABC-AICTE-MOE-2023-9182',
+        sha256Hash: generateHash(
+          buildCredentialCanonicalPayload({
+            id: 'CRED-ATTUR-ABC-01',
+            title: 'Academic Bank of Credits (ABC) Digital Ledger Account',
+            issuingInstitution: 'Academic Bank of Credits, Ministry of Education',
+            yearOfPassing: 2023,
+            cgpaOrPercentage: '164 Valid Verified Credits Transferred',
+            aicteApprovalNumber: 'ABC-AICTE-MOE-2023-9182',
+          })
+        ),
+        digitalSignature: 'SIG-PKI-ECDSA-ABC-NETF-1192803C',
+        issuerCertificateSerial: 'NAD-ABC-PKI-2023-11928',
+        timestamp: '2023-08-10T12:00:00Z',
+      },
+    ],
+  },
+  {
+    apaarId: '5730 3830 3977',
+    pen: '20230194812',
+    name: 'Aishwarya A',
+    dob: '22 Dec 2015',
+    gender: 'Female',
+    currentInstitution: 'Govt Middle School, Tambaram',
+    stage: 'Middle',
+    gradeOrClass: 'Class 6',
+    district: 'Chennai',
+    status: 'Active',
+    aadhaarMismatch: false,
+    consentPending: false,
+    hasDigilockerAccount: true,
+    digilockerDocumentsCount: 1,
+    abcCreditsBalance: 0,
+    contactEmail: 'aishwarya.tambaram@student.example.edu.in',
+    contactPhone: '+91 90000 00004',
+    credentials: [],
+  },
+  {
+    apaarId: '6365 2135 5206',
+    pen: '20241094812',
+    name: 'Aishwarya S',
+    dob: '11 Jul 2016',
+    gender: 'Female',
+    currentInstitution: 'Panchayat Union Primary School, Omalur',
+    stage: 'Primary',
+    gradeOrClass: 'Class 5',
+    district: 'Salem',
+    status: 'Active',
+    aadhaarMismatch: false,
+    consentPending: true,
+    hasDigilockerAccount: true,
+    digilockerDocumentsCount: 1,
+    abcCreditsBalance: 0,
+    contactEmail: 'pups.omalur@school.example.edu.in',
+    contactPhone: '+91 90000 00005',
+    credentials: [],
+  },
+  {
+    apaarId: '3862 5259 2101',
+    pen: '20249018471',
+    name: 'Ajay B',
+    dob: '18 Oct 2016',
+    gender: 'Male',
+    currentInstitution: 'Panchayat Union Primary School, Srirangam',
+    stage: 'Primary',
+    gradeOrClass: 'Class 5',
+    district: 'Tiruchirappalli',
+    status: 'Active',
+    aadhaarMismatch: false,
+    consentPending: false,
+    hasDigilockerAccount: true,
+    digilockerDocumentsCount: 1,
+    abcCreditsBalance: 0,
+    contactEmail: 'ajay.srirangam@student.example.edu.in',
+    contactPhone: '+91 90000 00006',
+    credentials: [],
+  },
+  {
+    apaarId: '8686 2578 1740',
+    pen: '20199182740',
+    name: 'Karthik M',
+    dob: '14 May 2002',
+    gender: 'Male',
+    currentInstitution: 'PSG College of Technology, Coimbatore',
+    stage: 'Graduated',
+    district: 'Coimbatore',
+    status: 'Graduated',
+    aadhaarMismatch: false,
+    consentPending: false,
+    hasDigilockerAccount: true,
+    digilockerDocumentsCount: 3,
+    abcCreditsBalance: 168,
+    contactEmail: 'karthik.psg@student.example.edu.in',
+    contactPhone: '+91 90000 00007',
+    credentials: [
+      {
+        id: 'CRED-PSG-DEG-01',
+        type: 'DEGREE',
+        title: 'Bachelor of Engineering (B.E) - Mechanical Engineering',
+        issuingInstitution: 'PSG College of Technology (Autonomous / Anna University)',
+        issuingAuthority: 'Anna University & AICTE',
+        yearOfPassing: 2023,
+        cgpaOrPercentage: '8.74 CGPA (First Class with Distinction)',
+        specialization: 'Mechanical Systems Design & Robotics',
+        digilockerUri: 'in.gov.digilocker.annauniv.deg.2023.868625781740',
+        aicteApprovalNumber: 'AICTE-TN-ENG-1994-1029',
+        sha256Hash: generateHash(
+          buildCredentialCanonicalPayload({
+            id: 'CRED-PSG-DEG-01',
+            title: 'Bachelor of Engineering (B.E) - Mechanical Engineering',
+            issuingInstitution: 'PSG College of Technology (Autonomous / Anna University)',
+            yearOfPassing: 2023,
+            cgpaOrPercentage: '8.74 CGPA (First Class with Distinction)',
+            aicteApprovalNumber: 'AICTE-TN-ENG-1994-1029',
+          })
+        ),
+        digitalSignature: 'SIG-PKI-RSA-PSG-AU-991823B',
+        issuerCertificateSerial: 'NAD-ANNAUNIV-PKI-2023-44102',
+        timestamp: '2023-06-25T11:00:00Z',
+      },
+      {
+        id: 'CRED-PSG-ABC-01',
+        type: 'ABC_TRANSCRIPT',
+        title: 'Academic Bank of Credits Verified Transcript',
+        issuingInstitution: 'Academic Bank of Credits, Ministry of Education',
+        issuingAuthority: 'NETF / UGC',
+        yearOfPassing: 2023,
+        cgpaOrPercentage: '168 Valid Verified Credits Transferred',
+        specialization: 'Mechanical Engineering',
+        digilockerUri: 'in.gov.abc.transcript.2023.868625781740',
+        aicteApprovalNumber: 'ABC-AICTE-MOE-2023-8810',
+        sha256Hash: generateHash(
+          buildCredentialCanonicalPayload({
+            id: 'CRED-PSG-ABC-01',
+            title: 'Academic Bank of Credits Verified Transcript',
+            issuingInstitution: 'Academic Bank of Credits, Ministry of Education',
+            yearOfPassing: 2023,
+            cgpaOrPercentage: '168 Valid Verified Credits Transferred',
+            aicteApprovalNumber: 'ABC-AICTE-MOE-2023-8810',
+          })
+        ),
+        digitalSignature: 'SIG-PKI-ECDSA-ABC-NETF-889102A',
+        issuerCertificateSerial: 'NAD-ABC-PKI-2023-88910',
+        timestamp: '2023-07-01T09:30:00Z',
+      },
+    ],
+  },
+  {
+    apaarId: '3988 1451 1988',
+    pen: '20199018241',
+    name: 'Priyadharshini K',
+    dob: '28 Aug 2001',
+    gender: 'Female',
+    currentInstitution: 'National Institute of Technology, Tiruchirappalli',
+    stage: 'PG',
+    gradeOrClass: 'M.Tech 2nd Year',
+    district: 'Tiruchirappalli',
+    status: 'Active',
+    aadhaarMismatch: false,
+    consentPending: false,
+    hasDigilockerAccount: true,
+    digilockerDocumentsCount: 3,
+    abcCreditsBalance: 198,
+    contactEmail: 'priyadharshini.nitt@student.example.edu.in',
+    contactPhone: '+91 90000 00008',
+    credentials: [],
+  },
+  {
+    apaarId: '8793 6328 9442',
+    pen: '20201928471',
+    name: 'Dinesh Kumar V',
+    dob: '05 Feb 2003',
+    gender: 'Male',
+    currentInstitution: "St. Joseph's College (Autonomous), Tiruchirappalli",
+    stage: 'Graduated',
+    district: 'Thanjavur',
+    status: 'Graduated',
+    aadhaarMismatch: false,
+    consentPending: false,
+    hasDigilockerAccount: true,
+    digilockerDocumentsCount: 2,
+    abcCreditsBalance: 140,
+    contactEmail: 'dineshkumar.sjc@student.example.edu.in',
+    contactPhone: '+91 90000 00009',
+    credentials: [],
+  },
+  {
+    apaarId: '8813 7409 0183',
+    pen: '20208192041',
+    name: 'Rajesh R',
+    dob: '12 Jun 2002',
+    gender: 'Male',
+    currentInstitution: 'Govt College of Engineering, Salem',
+    stage: 'Graduated',
+    district: 'The Nilgiris',
+    status: 'Graduated',
+    aadhaarMismatch: false,
+    consentPending: false,
+    hasDigilockerAccount: true,
+    digilockerDocumentsCount: 2,
+    abcCreditsBalance: 160,
+    contactEmail: 'rajesh.gce@student.example.edu.in',
+    contactPhone: '+91 90000 00010',
+    credentials: [],
+  },
+];
+
+// Generate the remaining students so we have exactly 66 students matching image_19ec0135.png
+export function generateFullStudentRegistry(): Student[] {
+  const result: Student[] = [...STUDENTS_SAMPLE];
+
+  const targetDistricts: Record<string, number> = {
+    'The Nilgiris': 12,
+    Tiruchirappalli: 11,
+    Salem: 11,
+    Coimbatore: 8,
+    Thanjavur: 7,
+    Erode: 6,
+    Chennai: 5,
+    Madurai: 4,
+    Tirunelveli: 2,
+  };
+
+  const targetStages: Record<Student['stage'], number> = {
+    Primary: 19,
+    Middle: 10,
+    Secondary: 3,
+    'Higher Secondary': 6,
+    UG: 9,
+    PG: 5,
+    Graduated: 12,
+    'Left education': 2,
+  };
+
+  const currentDistCount: Record<string, number> = {};
+  const currentStageCount: Record<string, number> = {};
+
+  result.forEach(s => {
+    currentDistCount[s.district] = (currentDistCount[s.district] || 0) + 1;
+    currentStageCount[s.stage] = (currentStageCount[s.stage] || 0) + 1;
+  });
+
+  const namesPool = [
+    'Anand Kumar R', 'Bala Subramani P', 'Chandran S', 'Devi Priya M', 'Elango K',
+    'Fathima Begum A', 'Gowtham N', 'Hariharan T', 'Indhumathi S', 'Jayanthi R',
+    'Kavitha M', 'Lakshmi Narayanan V', 'Manikandan P', 'Nandhini G', 'Omprakash S',
+    'Pavithra K', 'Radha Krishna M', 'Senthil Nathan T', 'Thilagavathi P', 'Uma Maheswari S',
+    'Vigneshwaran R', 'Yuvashree K', 'Aravind S', 'Bhavani M', 'Chitra P',
+    'Deepak Raj T', 'Ezhil Arasan V', 'Geetha R', 'Harish K', 'Ishwarya N',
+    'Janani S', 'Karthikeyan B', 'Lavanya T', 'Muthukumar S', 'Naveen Raj P',
+    'Pooja Sri M', 'Ranjith Kumar S', 'Saravanan K', 'Thenmozhi V', 'Vasanth M',
+    'Yamini R', 'Archana S', 'Balaji K', 'Divya Bharathi M', 'Ganesh Kumar T',
+    'Hemalatha P', 'Jagadeesh S', 'Kiruthika N', 'Madhavan R', 'Nithya Sri K',
+    'Prasanna V', 'Ramesh Babu S', 'Sharmila Begum M', 'Tamilselvan P', 'Vijay Anand K',
+    'Keerthana S', 'Boopathi R', 'Sowmya M'
+  ];
+
+  let nameIndex = 0;
+  const stageKeys = Object.keys(targetStages) as Student['stage'][];
+
+  for (const stage of stageKeys) {
+    const needed = (targetStages[stage] || 0) - (currentStageCount[stage] || 0);
+    for (let i = 0; i < needed; i++) {
+      // Find a district that still needs students
+      let chosenDistrict = 'The Nilgiris';
+      for (const [dist, target] of Object.entries(targetDistricts)) {
+        if ((currentDistCount[dist] || 0) < target) {
+          chosenDistrict = dist;
+          break;
+        }
+      }
+      currentDistCount[chosenDistrict] = (currentDistCount[chosenDistrict] || 0) + 1;
+      currentStageCount[stage] = (currentStageCount[stage] || 0) + 1;
+
+      const rawIdNum = 100000000000 + (result.length * 9918231 + 47219) % 899999999999;
+      const formattedId = `${rawIdNum.toString().slice(0, 4)} ${rawIdNum.toString().slice(4, 8)} ${rawIdNum.toString().slice(8, 12)}`;
+      const name = namesPool[nameIndex % namesPool.length];
+      nameIndex++;
+
+      const isAadhaarMismatch = result.filter(s => s.aadhaarMismatch).length < 5 && Math.random() < 0.15;
+      const isConsentPending = result.filter(s => s.consentPending).length < 6 && Math.random() < 0.2;
+
+      let inst = 'Govt Higher Secondary School, ' + chosenDistrict;
+      if (stage === 'Primary') inst = 'Panchayat Union Primary School, ' + chosenDistrict;
+      else if (stage === 'Middle') inst = 'Govt Middle School, ' + chosenDistrict;
+      else if (stage === 'UG' || stage === 'PG' || stage === 'Graduated') inst = 'College of Technology, ' + chosenDistrict;
+
+      result.push({
+        apaarId: formattedId,
+        pen: `202${(10000000 + result.length).toString()}`,
+        name,
+        dob: '15 Aug 200' + (result.length % 9),
+        gender: i % 2 === 0 ? 'Female' : 'Male',
+        currentInstitution: inst,
+        stage: stage,
+        district: chosenDistrict,
+        status: stage === 'Graduated' ? 'Graduated' : stage === 'Left education' ? 'Dropped out' : 'Active',
+        aadhaarMismatch: isAadhaarMismatch,
+        consentPending: isConsentPending,
+        hasDigilockerAccount: stage !== 'Left education',
+        digilockerDocumentsCount: stage === 'Graduated' ? 3 : stage === 'UG' ? 2 : 1,
+        abcCreditsBalance: stage === 'Graduated' ? 160 : stage === 'UG' ? 120 : 0,
+        contactEmail: `${name.toLowerCase().replace(/\s+/g, '.')}@student.tn.gov.in`,
+        contactPhone: `+91 9${(800000000 + result.length * 12345).toString().slice(0, 9)}`,
+        credentials: [],
+      });
+    }
+  }
+
+  // Ensure exact counts
+  return result.slice(0, 66);
+}

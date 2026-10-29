@@ -1,0 +1,177 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 1: Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'sriharikumar2210@gmail.com'
+      );
+    }
+
+    // Validation Blueprint: UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'name', 'email', 'role', 'organization', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'name', 'email', 'role', 'organization', 'apaarId', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.name is string && data.name.size() >= 2 && data.name.size() <= 120 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.role is string && data.role in ['STUDENT', 'EMPLOYER', 'INSTITUTION', 'REGULATOR'] &&
+        data.organization is string && data.organization.size() >= 2 && data.organization.size() <= 160 &&
+        (!('apaarId' in data) || (data.apaarId is string && data.apaarId.size() >= 12 && data.apaarId.size() <= 20)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: VerificationSessionLog
+    function isValidSessionLog(data) {
+      return data.keys().hasAll(['ownerId', 'actor', 'action', 'targetApaarId', 'details', 'status', 'createdAt']) &&
+        data.keys().hasOnly(['ownerId', 'actor', 'action', 'targetApaarId', 'details', 'status', 'createdAt']) &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.actor is string && data.actor.size() >= 2 && data.actor.size() <= 160 &&
+        data.action is string && data.action.size() >= 2 && data.action.size() <= 80 &&
+        data.targetApaarId is string && data.targetApaarId.size() >= 2 && data.targetApaarId.size() <= 64 &&
+        data.details is string && data.details.size() >= 2 && data.details.size() <= 600 &&
+        data.status is string && data.status in ['SUCCESS', 'INFO', 'ALERT'] &&
+        data.createdAt is timestamp;
+    }
+
+    // Validation Blueprint: VaultCredentialRecord
+    function isValidVaultCredential(data) {
+      return data.keys().hasAll([
+          'credentialId',
+          'ownerId',
+          'studentApaarId',
+          'type',
+          'title',
+          'issuingInstitution',
+          'cgpaOrPercentage',
+          'vaultUri',
+          'sha256Hash',
+          'digitalSignature',
+          'createdAt'
+        ]) &&
+        data.keys().hasOnly([
+          'credentialId',
+          'ownerId',
+          'studentApaarId',
+          'type',
+          'title',
+          'issuingInstitution',
+          'cgpaOrPercentage',
+          'vaultUri',
+          'sha256Hash',
+          'digitalSignature',
+          'documentFileName',
+          'documentFileSha256',
+          'createdAt'
+        ]) &&
+        data.credentialId is string && data.credentialId.size() >= 4 && data.credentialId.size() <= 128 && data.credentialId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.ownerId is string && data.ownerId.size() >= 1 && data.ownerId.size() <= 128 && data.ownerId.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.studentApaarId is string && data.studentApaarId.size() >= 12 && data.studentApaarId.size() <= 20 &&
+        data.type is string && data.type in ['DEGREE', 'MARKSHEET', 'AICTE_APPROVAL', 'ABC_TRANSCRIPT', 'TRANSFER_CERTIFICATE'] &&
+        data.title is string && data.title.size() >= 2 && data.title.size() <= 200 &&
+        data.issuingInstitution is string && data.issuingInstitution.size() >= 2 && data.issuingInstitution.size() <= 200 &&
+        data.cgpaOrPercentage is string && data.cgpaOrPercentage.size() >= 1 && data.cgpaOrPercentage.size() <= 80 &&
+        data.vaultUri is string && data.vaultUri.size() >= 16 && data.vaultUri.size() <= 300 &&
+        data.sha256Hash is string && data.sha256Hash.size() >= 16 && data.sha256Hash.size() <= 128 &&
+        data.digitalSignature is string && data.digitalSignature.size() >= 16 && data.digitalSignature.size() <= 256 &&
+        (!('documentFileName' in data) || (data.documentFileName is string && data.documentFileName.size() >= 1 && data.documentFileName.size() <= 180)) &&
+        (!('documentFileSha256' in data) || (data.documentFileSha256 is string && data.documentFileSha256.size() >= 16 && data.documentFileSha256.size() <= 128)) &&
+        data.createdAt is timestamp;
+    }
+
+    // Collection: /admins/{adminId} (Read-only lookup for RBAC)
+    match /admins/{adminId} {
+      allow get: if isVerifiedUser() && isValidId(adminId) && request.auth.uid == adminId;
+      allow list, create, update, delete: if false;
+    }
+
+    // Collection: /users/{userId} (PII Isolated to Owner or Admin)
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (existing().uid == request.auth.uid || isAdmin());
+
+      allow create: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == request.auth.uid &&
+        userId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (incoming().role in ['STUDENT', 'EMPLOYER', 'INSTITUTION'] || isAdmin());
+
+      allow update: if isVerifiedUser() &&
+        isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time && (
+          // Action 1: Owner updates profile details (cannot self-escalate role)
+          (request.auth.uid == userId &&
+            incoming().role == existing().role &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'organization', 'apaarId', 'updatedAt'])) ||
+          // Action 2: Admin updates profile or role
+          (isAdmin() &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['name', 'organization', 'apaarId', 'role', 'updatedAt']))
+        );
+
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Collection: /sessionLogs/{logId} (Immutable user-scoped audit logs)
+    match /sessionLogs/{logId} {
+      allow get: if isSignedIn() && isValidId(logId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+
+      allow create: if isVerifiedUser() &&
+        isValidId(logId) &&
+        isValidSessionLog(incoming()) &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time;
+
+      allow update, delete: if false;
+    }
+
+    // Collection: /vaultCredentials/{credentialId} (Immutable sealed APAAR Vault records)
+    match /vaultCredentials/{credentialId} {
+      allow get: if isSignedIn() && isValidId(credentialId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (existing().ownerId == request.auth.uid || isAdmin());
+
+      allow create: if isVerifiedUser() &&
+        isValidId(credentialId) &&
+        isValidVaultCredential(incoming()) &&
+        incoming().credentialId == credentialId &&
+        incoming().ownerId == request.auth.uid &&
+        incoming().createdAt == request.time;
+
+      allow update: if false;
+      allow delete: if isAdmin() && isValidId(credentialId);
+    }
+  }
+}

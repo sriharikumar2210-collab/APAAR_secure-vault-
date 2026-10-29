@@ -1,0 +1,225 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated operator or student profile in the APAAR National Registry portal.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user owner.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "name": {
+          "type": "string",
+          "description": "Display name of the operator or student.",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Verified email address of the user.",
+          "minLength": 3,
+          "maxLength": 160
+        },
+        "role": {
+          "type": "string",
+          "description": "Assigned portal role.",
+          "enum": ["STUDENT", "EMPLOYER", "INSTITUTION", "REGULATOR"]
+        },
+        "organization": {
+          "type": "string",
+          "description": "Affiliated University, Employer, or Regulatory Body.",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "apaarId": {
+          "type": "string",
+          "description": "Optional 12-digit APAAR ID formatted with spaces.",
+          "minLength": 12,
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server last update timestamp."
+        }
+      },
+      "required": ["uid", "name", "email", "role", "organization", "createdAt", "updatedAt"]
+    },
+    "VerificationSessionLog": {
+      "title": "VerificationSessionLog",
+      "description": "User-scoped immutable audit log entry stored in Firestore.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the authenticated user who created the audit log.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "actor": {
+          "type": "string",
+          "description": "Actor label.",
+          "minLength": 2,
+          "maxLength": 160
+        },
+        "action": {
+          "type": "string",
+          "description": "Audit action code.",
+          "minLength": 2,
+          "maxLength": 80
+        },
+        "targetApaarId": {
+          "type": "string",
+          "description": "Target 12-digit APAAR ID or system identifier.",
+          "minLength": 2,
+          "maxLength": 64
+        },
+        "details": {
+          "type": "string",
+          "description": "Human-readable audit description.",
+          "minLength": 2,
+          "maxLength": 600
+        },
+        "status": {
+          "type": "string",
+          "enum": ["SUCCESS", "INFO", "ALERT"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the event."
+        }
+      },
+      "required": ["ownerId", "actor", "action", "targetApaarId", "details", "status", "createdAt"]
+    },
+    "VaultCredentialRecord": {
+      "title": "VaultCredentialRecord",
+      "description": "Cryptographically sealed academic credential metadata stored in the APAAR Secure Credential Vault Firestore ledger.",
+      "type": "object",
+      "properties": {
+        "credentialId": {
+          "type": "string",
+          "description": "Unique identifier of the sealed credential.",
+          "minLength": 4,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user who synced or owns the Vault credential.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "studentApaarId": {
+          "type": "string",
+          "description": "12-digit APAAR ID of the student.",
+          "minLength": 12,
+          "maxLength": 20
+        },
+        "type": {
+          "type": "string",
+          "description": "Academic credential category.",
+          "enum": ["DEGREE", "MARKSHEET", "AICTE_APPROVAL", "ABC_TRANSCRIPT", "TRANSFER_CERTIFICATE"]
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the certificate or academic document.",
+          "minLength": 2,
+          "maxLength": 200
+        },
+        "issuingInstitution": {
+          "type": "string",
+          "description": "Issuing university, board, or institution.",
+          "minLength": 2,
+          "maxLength": 200
+        },
+        "cgpaOrPercentage": {
+          "type": "string",
+          "description": "Conferred CGPA, marks, or grade.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "vaultUri": {
+          "type": "string",
+          "description": "Canonical APAAR Vault URI (vault://apaar-registry/...).",
+          "minLength": 16,
+          "maxLength": 300
+        },
+        "sha256Hash": {
+          "type": "string",
+          "description": "SHA-256 payload digest of the credential.",
+          "minLength": 16,
+          "maxLength": 128
+        },
+        "digitalSignature": {
+          "type": "string",
+          "description": "HMAC-SHA256 cryptographic signature issued by the Vault.",
+          "minLength": 16,
+          "maxLength": 256
+        },
+        "documentFileName": {
+          "type": "string",
+          "description": "Optional uploaded document filename.",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "documentFileSha256": {
+          "type": "string",
+          "description": "Optional SHA-256 checksum of the uploaded document binary.",
+          "minLength": 16,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when sealed in Firestore."
+        }
+      },
+      "required": [
+        "credentialId",
+        "ownerId",
+        "studentApaarId",
+        "type",
+        "title",
+        "issuingInstitution",
+        "cgpaOrPercentage",
+        "vaultUri",
+        "sha256Hash",
+        "digitalSignature",
+        "createdAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Stores isolated user profile documents keyed by Firebase Auth UID."
+    },
+    "/sessionLogs/{logId}": {
+      "schema": {
+        "$ref": "#/entities/VerificationSessionLog"
+      },
+      "description": "Stores user-owned verification & authentication audit logs."
+    },
+    "/vaultCredentials/{credentialId}": {
+      "schema": {
+        "$ref": "#/entities/VaultCredentialRecord"
+      },
+      "description": "Stores cryptographically sealed APAAR Secure Credential Vault records."
+    }
+  }
+}

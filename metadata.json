@@ -1,0 +1,8 @@
+{
+  "name": "APAAR Registry Portal (Prototype)",
+  "description": "Hackathon prototype of an APAAR (One Nation, One Student ID) verification portal with student consent, signed academic credentials, and DPDP audit logs.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
