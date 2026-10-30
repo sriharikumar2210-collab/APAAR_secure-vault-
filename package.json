@@ -3,6 +3,9 @@
   "private": true,
   "version": "6.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
@@ -11,7 +14,7 @@
     "db:push": "drizzle-kit push --config=src/db/drizzle.config.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx --test src/server/*.test.ts src/services/*.test.ts src/utils/*.test.ts"
+    "test": "tsx --test src/server/accessRules.test.ts src/server/security.test.ts src/services/notificationService.test.ts src/utils/aicteComplianceEngine.test.ts src/utils/apaarApproval.test.ts src/utils/authEngine.test.ts src/utils/qrScanner.test.ts src/utils/vaultEngine.test.ts src/utils/verificationEngine.test.ts"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

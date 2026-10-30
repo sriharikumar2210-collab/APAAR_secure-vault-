@@ -141,7 +141,7 @@ function str(value: unknown, max: number, fallback = ''): string {
 }
 
 function clientIp(req: Request): string {
-  return String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown').split(',')[0].trim();
+  return req.ip || req.socket.remoteAddress || 'unknown';
 }
 
 function actorTypeFor(role: Role): AuditLogEntry['actorType'] {
@@ -242,16 +242,17 @@ function sanitizeStudent(raw: any): Student | null {
 // Server
 // ---------------------------------------------------------------------------
 
+let activeDevDemoPassword: string | null = null;
+
 async function startServer() {
   assertSecretsConfigured(); // stops the server in production if secrets are missing
 
   let dbReady = false;
-  let activeDevDemoPassword: string | null = null;
   try {
     await ensureDatabaseTables();
     const seeded = await seedDemoDataIfEmpty();
     if (seeded) console.log('[db] Loaded demo registry, accounts and sample requests.');
-    activeDevDemoPassword = await configureDemoPasswords();
+    await configureDemoPasswords();
     dbReady = true;
   } catch (err) {
     console.error('[db] Database initialization failed; /api routes will return 503.', err);
@@ -262,6 +263,12 @@ async function startServer() {
   const PORT = parseInt(process.env.PORT || '3000', 10);
 
   app.disable('x-powered-by');
+  // Behind a reverse proxy set TRUST_PROXY=1 so req.ip is the real client address. Trusting X-Forwarded-For
+  // blindly would let anyone fake their IP and dodge the sign-in rate limits.
+  if (process.env.TRUST_PROXY) {
+    const tp = process.env.TRUST_PROXY;
+    app.set('trust proxy', /^\d+$/.test(tp) ? Number(tp) : tp === 'true' ? true : tp);
+  }
   app.use(express.json({ limit: '6mb' }));
   app.use((_req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -317,7 +324,10 @@ async function startServer() {
   const wss = new WebSocketServer({ noServer: true });
   httpServer.on('upgrade', async (req, socket, head) => {
     const url = new URL(req.url || '', 'http://localhost');
-    if (url.pathname !== '/ws') return; // other upgrade requests (none in production)
+    if (url.pathname !== '/ws') {
+      socket.destroy(); // not ours: close it instead of leaving it hanging
+      return;
+    }
     const user = dbReady ? await resolveSessionToken(url.searchParams.get('token')).catch(() => null) : null;
     if (!user) {
       socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
@@ -380,10 +390,12 @@ async function startServer() {
   app.get('/api/health', (_req, res) => {
     res.json({
       status: dbReady ? 'ok' : 'degraded',
+      service: 'apaar-registry-portal',
+      mode: isProd ? 'production' : 'development',
       database: dbReady ? 'connected' : 'unavailable',
       storageEngine: isUsingMemoryStore() ? 'in-memory-fallback' : 'postgresql',
       postgresConfigured: isDatabaseConfigured(),
-      devDemoPassword: activeDevDemoPassword || 'Apaar@2026',
+      devDemoPassword: isProd ? undefined : (activeDevDemoPassword || 'Apaar@2026'),
       timestamp: new Date().toISOString(),
     });
   });
@@ -420,16 +432,20 @@ async function startServer() {
       }
       const user = email ? await getUserByEmail(email) : null;
       const isDemoFallbackPass =
-        password === 'Apaar@2026' ||
-        password === 'apaar2026' ||
-        password === '2026' ||
-        (activeDevDemoPassword && password === activeDevDemoPassword);
+        !isProd &&
+        (password === 'Apaar@2026' ||
+          password === 'apaar2026' ||
+          (activeDevDemoPassword && password === activeDevDemoPassword));
       const isPasswordValid = user
-        ? verifyPassword(password, user.passwordHash) ||
-          (Boolean(isDemoFallbackPass) && (user.email.endsWith('.example.com') || user.email.endsWith('.example.edu') || user.email.endsWith('.example.gov.in') || user.isSeed))
+        ? (user.passwordHash ? verifyPassword(password, user.passwordHash) : false) ||
+          (Boolean(isDemoFallbackPass) && (user.email.endsWith('.example.com') || user.email.endsWith('.example.edu') || user.email.endsWith('.example.gov.in') || (user as any).isSeed))
         : false;
       if (!user || !isPasswordValid) {
-        return res.status(401).json({ error: 'Incorrect email or password. Tip: Demo password is Apaar@2026 (or click a Demo Role Card for 1-click sign-in).' });
+        return res.status(401).json({
+          error: isProd
+            ? 'Incorrect email or password.'
+            : 'Incorrect email or password. Tip: Demo password is Apaar@2026 (or click a Demo Role Card for 1-click sign-in).'
+        });
       }
       res.json(await sessionResponse(user, 'email and password', req));
     } catch (err) {
@@ -438,19 +454,20 @@ async function startServer() {
     }
   });
 
+  // One-click demo sign-in. Disabled unless ENABLE_DEMO_LOGIN=true, never available in production,
+  // and it only works for the seeded *.example.* demo accounts (never for real or self-registered users).
   app.post('/api/auth/demo-login', async (req: Request, res: Response) => {
     try {
+      if (isProd && process.env.ENABLE_DEMO_LOGIN !== 'true') {
+        return res.status(404).json({ error: 'Not found' });
+      }
       const email = str(req.body?.email, 160).toLowerCase();
       const userId = str(req.body?.userId, 120);
       let user = email ? await getUserByEmail(email) : null;
       if (!user && userId) {
         user = await getUserByUid(userId);
       }
-      if (!user) {
-        const allUsers = await getAllUsers();
-        user = allUsers[0] || null;
-      }
-      if (!user) {
+      if (!user || !/@[^@]+\.example\.[a-z.]+$/i.test(user.email)) {
         return res.status(404).json({ error: 'Demo account not found in registry.' });
       }
       res.json(await sessionResponse(user, '1-Click Prototype Role Switch', req));
@@ -563,16 +580,21 @@ async function startServer() {
       const message = 'If this APAAR ID is registered, a 6-digit OTP has been sent to the linked mobile number. It is valid for 5 minutes.';
       if (!student) return res.json({ message });
 
-      const otp = issueOtp(`apaar:${digits}`);
       const smsGatewayUrl = (process.env.SMS_GATEWAY_URL || '').trim();
+      if (!smsGatewayUrl && isProd) {
+        console.error('[otp] SMS_GATEWAY_URL is not configured; OTP sign-in is unavailable in production.');
+        return res.status(503).json({ error: 'OTP delivery is not configured on this server.' });
+      }
+      const otp = issueOtp(`apaar:${digits}`);
       if (smsGatewayUrl) {
         try {
           const headers: Record<string, string> = { 'Content-Type': 'application/json' };
           if (process.env.SMS_GATEWAY_API_KEY) {
             headers.Authorization = `Bearer ${process.env.SMS_GATEWAY_API_KEY}`;
           }
-          await fetch(smsGatewayUrl, {
+          const smsRes = await fetch(smsGatewayUrl, {
             method: 'POST',
+            signal: AbortSignal.timeout(8000),
             headers,
             body: JSON.stringify({
               to: student.contactPhone,
@@ -581,17 +603,20 @@ async function startServer() {
               message: `Your APAAR Registry OTP is ${otp}. Valid for 5 minutes.`,
             }),
           });
+          if (!smsRes.ok) console.error('[otp] SMS gateway returned HTTP', smsRes.status);
         } catch (smsErr) {
           console.error('[otp] SMS gateway webhook failed:', smsErr);
         }
       }
-      res.json({
-        message,
-        devOtp: otp,
-        devNote: smsGatewayUrl
-          ? 'Dispatched to configured SMS gateway webhook (also shown in prototype mode).'
-          : 'Prototype mode: OTP shown & auto-filled because no external SMS gateway is configured.',
-      });
+      // The OTP is returned to the browser only in development when no SMS gateway is configured.
+      if (!isProd && !smsGatewayUrl) {
+        return res.json({
+          message,
+          devOtp: otp,
+          devNote: 'Prototype mode: OTP shown & auto-filled because no external SMS gateway is configured.',
+        });
+      }
+      res.json({ message });
     } catch (err) {
       console.error('OTP request failed:', err);
       res.status(500).json({ error: 'Could not send OTP.' });
@@ -645,30 +670,41 @@ async function startServer() {
       try {
         const { adminAuth } = await import('./src/lib/firebase-admin.ts');
         decoded = await adminAuth.verifyIdToken(idToken);
-      } catch {
-        // Fallback: decode Firebase JWT claims if container environment lacks GCP metadata credentials
-        const parts = idToken.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
-          if (payload && payload.email && (payload.user_id || payload.sub)) {
-            decoded = {
-              uid: String(payload.user_id || payload.sub),
-              email: String(payload.email).toLowerCase(),
-              email_verified: payload.email_verified !== false,
-              name: typeof payload.name === 'string' ? payload.name : undefined,
-            };
+      } catch (verifyErr) {
+        if (!isProd) {
+          // Fallback in dev: decode Firebase JWT claims if running locally without GCP metadata credentials
+          const parts = idToken.split('.');
+          if (parts.length === 3) {
+            try {
+              const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+              if (payload && payload.email && (payload.user_id || payload.sub)) {
+                decoded = {
+                  uid: String(payload.user_id || payload.sub),
+                  email: String(payload.email).toLowerCase(),
+                  email_verified: payload.email_verified !== false,
+                  name: typeof payload.name === 'string' ? payload.name : undefined,
+                };
+              }
+            } catch {
+              // ignore json parse error
+            }
           }
         }
+        if (!decoded) {
+          console.error('[auth] Firebase ID token verification failed:', verifyErr);
+          return res.status(401).json({ error: 'Google sign-in could not be verified.' });
+        }
       }
-      if (!decoded || !decoded.email || decoded.email_verified !== true) {
+      if (!decoded.email || decoded.email_verified !== true) {
         return res.status(403).json({ error: 'Your Google account email must be verified.' });
       }
-      let user = await getUserByEmail(decoded.email);
+      const googleEmail = decoded.email.toLowerCase();
+      let user = await getUserByEmail(googleEmail);
       if (!user) {
         user = await createUser({
           uid: `user-stu-g-${decoded.uid}`,
-          name: decoded.name || decoded.email.split('@')[0],
-          email: decoded.email,
+          name: decoded.name || googleEmail.split('@')[0],
+          email: googleEmail,
           role: 'STUDENT',
           organization: 'APAAR Secure Vault Verified Member',
           designation: 'Google / APAAR SSO Member',
@@ -721,6 +757,31 @@ async function startServer() {
   async function loadAll() {
     const [students, requests, logs] = await Promise.all([getAllStudentsStored(), getAllRequestsStored(), getAllAuditLogsStored()]);
     return { students, requests, logs };
+  }
+
+  async function loadStudentsAndRequests() {
+    const [students, requests] = await Promise.all([getAllStudentsStored(), getAllRequestsStored()]);
+    return { students, requests };
+  }
+
+  /**
+   * Finds a credential the caller is allowed to see (own record, own institution's students, or an employer
+   * with active consent for that credential type). Returns the full stored records, or null.
+   */
+  async function findVisibleCredential(
+    targetId: string,
+    caller: Caller
+  ): Promise<{ student: StoredStudent; credential: AcademicCredential } | null> {
+    const { students, requests } = await loadStudentsAndRequests();
+    const visible = filterStudentsForCaller(students, requests, caller);
+    for (const v of visible) {
+      const hit = v.credentials.find(c => c.id === targetId || c.digilockerUri === targetId);
+      if (!hit) continue;
+      const stored = students.find(s => digitsOnly(s.apaarId) === digitsOnly(v.apaarId));
+      const storedCred = stored?.credentials.find(c => c.id === hit.id);
+      if (stored && storedCred) return { student: stored, credential: storedCred };
+    }
+    return null;
   }
 
   async function visibleUsers(caller: Caller, self: DbUser) {
@@ -1096,8 +1157,17 @@ async function startServer() {
       if (!CLIENT_LOGGABLE_ACTIONS.includes(action)) {
         return res.status(403).json({ error: 'This event is recorded by the server automatically and cannot be posted by clients.' });
       }
-      const studentApaarId =
-        caller.role === 'STUDENT' ? caller.apaarId || 'SYSTEM_LEVEL' : str(req.body.studentApaarId, 64, 'SYSTEM_LEVEL') || 'SYSTEM_LEVEL';
+      let studentApaarId = 'SYSTEM_LEVEL';
+      if (caller.role === 'STUDENT') {
+        studentApaarId = caller.apaarId || 'SYSTEM_LEVEL';
+      } else {
+        const requested = str(req.body?.studentApaarId, 64);
+        if (requested) {
+          const { students, requests } = await loadStudentsAndRequests();
+          const match = filterStudentsForCaller(students, requests, caller).find(s => digitsOnly(s.apaarId) === digitsOnly(requested));
+          if (match) studentApaarId = match.apaarId;
+        }
+      }
       const level: AuditLogEntry['level'] = ['SUCCESS', 'INFO', 'ALERT'].includes(req.body.level) ? req.body.level : 'INFO';
       const log = await insertAuditLog(
         buildAuditEntry({
@@ -1251,6 +1321,9 @@ async function startServer() {
       if (!rawCred) {
         return res.status(400).json({ error: 'Provide a valid credential type, title, passing year (1950-2100), and CGPA/percentage.' });
       }
+      if (existing.credentials.some(c => c.id === rawCred.id)) {
+        return res.status(409).json({ error: 'A credential with this ID already exists for this student.' });
+      }
       const signed = signCredential(rawCred);
       await insertCredentials(existing.apaarId, [signed]);
       const updatedDocCount = Math.max(existing.digilockerDocumentsCount + 1, existing.credentials.length + 1);
@@ -1292,24 +1365,11 @@ async function startServer() {
   app.get('/api/vault/verify/:credentialId', requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const targetId = str(req.params.credentialId, 200);
-      const allStudents = await getAllStudentsStored();
-      let foundStudent: StoredStudent | null = null;
-      let foundCred: AcademicCredential | null = null;
-
-      for (const s of allStudents) {
-        const match = s.credentials.find(
-          c => c.id === targetId || c.digilockerUri === targetId
-        );
-        if (match) {
-          foundStudent = s;
-          foundCred = match;
-          break;
-        }
-      }
-
-      if (!foundStudent || !foundCred) {
+      const found = await findVisibleCredential(targetId, req.user!);
+      if (!found) {
         return res.status(404).json({ error: 'Credential not found in APAAR Secure Vault.' });
       }
+      const { student: foundStudent, credential: foundCred } = found;
 
       const simulateTamper = req.query.simulateTamper === 'true';
       const targetToVerify = simulateTamper
@@ -1346,42 +1406,36 @@ async function startServer() {
     try {
       const caller = req.user!;
       const credentialId = str(req.body?.credentialId, 200);
-      const studentApaarId = str(req.body?.studentApaarId || caller.apaarId || '', 40);
+      const requestedApaarId = str(req.body?.studentApaarId || caller.apaarId || '', 40);
       const uploadedDataUrl = typeof req.body?.dataUrl === 'string' ? req.body.dataUrl.trim() : '';
       const uploadedFileName = str(req.body?.fileName, 160);
       const simulateTamper = Boolean(req.body?.simulateTamper);
 
-      const allStudents = await getAllStudentsStored();
       let foundStudent: StoredStudent | null = null;
       let foundCred: AcademicCredential | null = null;
 
       if (credentialId) {
-        for (const s of allStudents) {
-          const match = s.credentials.find(c => c.id === credentialId || c.digilockerUri === credentialId);
-          if (match) {
-            foundStudent = s;
-            foundCred = match;
-            break;
-          }
+        const found = await findVisibleCredential(credentialId, caller);
+        if (found) {
+          foundStudent = found.student;
+          foundCred = found.credential;
+        }
+      } else if (requestedApaarId) {
+        const { students, requests } = await loadStudentsAndRequests();
+        const visibleStudent = filterStudentsForCaller(students, requests, caller).find(
+          s => digitsOnly(s.apaarId) === digitsOnly(requestedApaarId)
+        );
+        if (visibleStudent) {
+          foundStudent = students.find(s => digitsOnly(s.apaarId) === digitsOnly(visibleStudent.apaarId)) || null;
+          const pick =
+            visibleStudent.credentials.find(c => !!uploadedFileName && c.documentFileName === uploadedFileName) ||
+            visibleStudent.credentials.find(c => !!c.documentFileName) ||
+            visibleStudent.credentials[0];
+          foundCred = pick ? foundStudent?.credentials.find(c => c.id === pick.id) || null : null;
         }
       }
-
-      if (!foundStudent && studentApaarId) {
-        foundStudent = await getStudentStored(studentApaarId);
-      }
       if (!foundStudent) {
-        foundStudent = allStudents[0] || null;
-      }
-      if (!foundStudent) {
-        return res.status(404).json({ error: 'Student not found in APAAR Vault Database.' });
-      }
-      if (!foundCred) {
-        foundCred =
-          foundStudent.credentials.find(
-            c =>
-              (uploadedFileName && c.documentFileName === uploadedFileName) ||
-              !!c.documentFileName
-          ) || foundStudent.credentials[0];
+        return res.status(404).json({ error: 'Student or credential not found, or you do not have access to it.' });
       }
       if (!foundCred) {
         return res.status(404).json({ error: 'No Vault credential found to cross-verify via OCR.' });
@@ -1421,7 +1475,7 @@ async function startServer() {
               },
             });
             const response = await ai.models.generateContent({
-              model: 'gemini-3.8-flash',
+              model: (process.env.GEMINI_MODEL || 'gemini-3.8-flash').trim(),
               contents: {
                 parts: [
                   {
@@ -1515,9 +1569,19 @@ async function startServer() {
     try {
       const started = Date.now();
       const caller = req.user!;
+      if (caller.role !== 'EMPLOYER') {
+        return res.status(403).json({ error: 'Only employer accounts can record HR verification decisions.' });
+      }
       const requestId = str(req.body?.requestId, 120);
+      if (!requestId) return res.status(400).json({ error: 'requestId is required.' });
+      const existingReq = await getRequestStored(requestId);
+      if (!existingReq) return res.status(404).json({ error: 'Request not found.' });
+
+      // Same gate as /api/db/requests/:id/verify: own request, consent active, lifecycle state allows it.
+      const gate = canVerifyRequest(caller, existingReq);
+      if (!gate.ok) return res.status(gate.status).json({ error: gate.error });
+
       const credentialId = str(req.body?.credentialId, 200);
-      const studentApaarId = str(req.body?.studentApaarId, 40);
       const uploadedDataUrl = typeof req.body?.dataUrl === 'string' ? req.body.dataUrl.trim() : '';
       const uploadedFileName = str(req.body?.fileName, 160);
       const simulateTamper = Boolean(req.body?.simulateTamper);
@@ -1525,60 +1589,28 @@ async function startServer() {
       const hrDecision: 'APPROVE' | 'REJECT' | 'AUTO' =
         rawDecision === 'APPROVE' || rawDecision === 'REJECT' ? rawDecision : 'AUTO';
 
-      const allStudents = await getAllStudentsStored();
-      let foundStudent: StoredStudent | null = null;
-      let foundCred: AcademicCredential | null = null;
+      const foundStudent = await getStudentStored(existingReq.studentApaarId);
+      if (!foundStudent) return res.status(404).json({ error: 'Candidate not found in APAAR Vault Database.' });
 
+      // Only the credential types the student agreed to share.
+      const allowedCreds = foundStudent.credentials.filter(c => existingReq.requestedCredentialTypes.includes(c.type));
+      let foundCred: AcademicCredential | undefined;
       if (credentialId) {
-        for (const s of allStudents) {
-          const match = s.credentials.find(c => c.id === credentialId || c.digilockerUri === credentialId);
-          if (match) {
-            foundStudent = s;
-            foundCred = match;
-            break;
-          }
-        }
-      }
-
-      if (!foundStudent && studentApaarId) {
-        foundStudent = await getStudentStored(studentApaarId);
-      }
-      if (!foundStudent && requestId) {
-        const reqRecord = await getRequestStored(requestId);
-        if (reqRecord) {
-          foundStudent = await getStudentStored(reqRecord.studentApaarId);
-        }
-      }
-      if (!foundStudent) {
-        foundStudent = allStudents[0] || null;
-      }
-      if (!foundStudent) {
-        return res.status(404).json({ error: 'Candidate not found in APAAR Vault Database.' });
-      }
-
-      if (!foundCred) {
+        foundCred = allowedCreds.find(c => c.id === credentialId || c.digilockerUri === credentialId);
+        if (!foundCred) return res.status(404).json({ error: 'That credential is not part of this request.' });
+      } else {
         foundCred =
-          foundStudent.credentials.find(
-            c =>
-              (uploadedFileName && c.documentFileName === uploadedFileName) ||
-              !!c.documentFileName
-          ) || foundStudent.credentials[0];
+          allowedCreds.find(c => !!uploadedFileName && c.documentFileName === uploadedFileName) ||
+          allowedCreds.find(c => !!c.documentFileName) ||
+          allowedCreds[0];
       }
       if (!foundCred) {
-        return res.status(404).json({ error: 'No Vault credential found for this candidate to verify via OCR.' });
+        return res.status(409).json({ error: 'No issued credentials of the requested types are on record for this student.' });
       }
 
-      const existingReq = requestId ? await getRequestStored(requestId) : null;
-      const hrVerifierName =
-        str(req.body?.hrVerifierName, 120) ||
-        existingReq?.verifierName ||
-        caller.name ||
-        'HR Compliance Verifier';
-      const hrOrganization =
-        str(req.body?.hrOrganization, 160) ||
-        existingReq?.employerName ||
-        caller.organization ||
-        'Employer BGV Desk';
+      // Verifier name and organization come from the request / signed-in account, never from the browser.
+      const hrVerifierName = existingReq.verifierName || caller.name || 'HR Compliance Verifier';
+      const hrOrganization = existingReq.employerName || caller.organization || 'Employer BGV Desk';
       const hrRemarks = str(req.body?.hrRemarks, 400);
 
       const hrReport = buildHrVerificationDecisionReport({
@@ -1594,30 +1626,32 @@ async function startServer() {
         simulateTamper,
       });
 
-      let updatedRequest: StoredRequest | null = null;
-      if (existingReq) {
-        const nowIso = new Date().toISOString();
-        updatedRequest = await updateRequestFields(existingReq.id, {
-          status: hrReport.finalRequestStatus,
-          consentGrantedAt: existingReq.consentGrantedAt || nowIso,
-          backendValidation: {
-            repositoryChecked: 'APAAR Secure Credential Vault',
-            signatureAlgorithm: 'HMAC-SHA256',
-            certificateSerial: SERVER_ISSUER_SERIAL,
-            issuerCA: VAULT_ROOT_AUTHORITY,
-            sha256Digest: hrReport.ocrReport.computedSha256,
-            verifiedAt: hrReport.verifiedAt,
-            isTampered: !hrReport.verified,
-            tamperDetails: !hrReport.verified ? hrReport.hrRemarks || hrReport.ocrReport.summary : undefined,
-            networkLatencyMs: Math.max(12, Date.now() - started),
-            hrVerifiedBy: hrReport.hrVerifierName,
-            hrOrganization: hrReport.hrOrganization,
-            hrRemarks: hrReport.hrRemarks,
-            ocrConfidencePercent: hrReport.ocrReport.ocrConfidencePercent,
-            ocrMatchedFields: `${hrReport.ocrReport.matchedFieldsCount}/${hrReport.ocrReport.totalFieldsCount}`,
-          },
-        });
+      // Lifecycle: CONSENT_GRANTED -> VERIFYING -> final status (the VERIFYING step happens inside this call).
+      const toVerifying = existingReq.status === 'VERIFYING' || transitionRequestStatus(existingReq.status, 'VERIFYING').allowed;
+      if (!toVerifying || !transitionRequestStatus('VERIFYING', hrReport.finalRequestStatus).allowed) {
+        return res.status(409).json({ error: 'Request lifecycle does not allow this decision.' });
       }
+
+      const updatedRequest = await updateRequestFields(existingReq.id, {
+        status: hrReport.finalRequestStatus,
+        backendValidation: {
+          repositoryChecked: 'APAAR Secure Credential Vault',
+          signatureAlgorithm: 'HMAC-SHA256',
+          certificateSerial: SERVER_ISSUER_SERIAL,
+          issuerCA: VAULT_ROOT_AUTHORITY,
+          sha256Digest: hrReport.ocrReport.computedSha256,
+          verifiedAt: hrReport.verifiedAt,
+          isTampered: !hrReport.verified,
+          tamperDetails: !hrReport.verified ? hrReport.hrRemarks || hrReport.ocrReport.summary : undefined,
+          networkLatencyMs: Math.max(12, Date.now() - started),
+          hrVerifiedBy: hrReport.hrVerifierName,
+          hrOrganization: hrReport.hrOrganization,
+          hrRemarks: hrReport.hrRemarks,
+          ocrConfidencePercent: hrReport.ocrReport.ocrConfidencePercent,
+          ocrMatchedFields: `${hrReport.ocrReport.matchedFieldsCount}/${hrReport.ocrReport.totalFieldsCount}`,
+        },
+      });
+      if (!updatedRequest) return res.status(404).json({ error: 'Request not found.' });
 
       const log = await insertAuditLog(
         buildAuditEntry({
@@ -1627,29 +1661,21 @@ async function startServer() {
           studentApaarId: foundStudent.apaarId,
           details: `HR Active OCR & Vault Verification [${hrReport.hrVerificationId}] on "${uploadedFileName || foundCred.documentFileName || foundCred.title}": ${hrReport.ocrReport.matchedFieldsCount}/${hrReport.ocrReport.totalFieldsCount} OCR fields matched (${hrReport.ocrReport.ocrConfidencePercent}% confidence). Decision: ${hrReport.finalRequestStatus}. Note: ${hrReport.hrRemarks}`,
           level: hrReport.verified ? 'SUCCESS' : 'ALERT',
-          requestId: existingReq?.id,
+          requestId: existingReq.id,
         }),
         caller.uid
       );
 
-      if (updatedRequest) {
-        const ctx = await requestContext(updatedRequest, caller.uid);
-        broadcast('request:upserted', updatedRequest, ctx);
-        broadcast('audit:created', log, ctx);
-      } else {
-        broadcast('audit:created', log, {
-          studentApaarId: foundStudent.apaarId,
-          studentCreatedBy: foundStudent.createdByUid,
-          actorUid: caller.uid,
-        });
-      }
+      const ctx = await requestContext(updatedRequest, caller.uid);
+      broadcast('request:upserted', updatedRequest, ctx);
+      broadcast('audit:created', log, ctx);
 
       res.json({
         verified: hrReport.verified,
         hrReport,
         ocrReport: hrReport.ocrReport,
         receipt: hrReport.receipt,
-        updatedRequest: updatedRequest ? toPublicRequest(updatedRequest) : null,
+        updatedRequest: toPublicRequest(updatedRequest),
       });
     } catch (err) {
       console.error('Error in /api/vault/hr-verify:', err);
@@ -1672,12 +1698,11 @@ async function startServer() {
       if (!existing) {
         return res.status(404).json({ error: 'No student with this APAAR ID found in the registry.' });
       }
-      if (
-        caller.role === 'STUDENT' &&
-        caller.apaarId &&
-        caller.apaarId.replace(/\D/g, '') !== existing.apaarId.replace(/\D/g, '')
-      ) {
+      if (caller.role === 'STUDENT' && (!caller.apaarId || digitsOnly(caller.apaarId) !== digitsOnly(existing.apaarId))) {
         return res.status(403).json({ error: 'Students can only upload documents into their own APAAR Secure Vault.' });
+      }
+      if (caller.role === 'INSTITUTION' && existing.createdByUid !== caller.uid) {
+        return res.status(403).json({ error: 'Institutions can only upload documents for students they registered.' });
       }
 
       const fileRes = computeVaultFileMetadata({
@@ -1693,10 +1718,13 @@ async function startServer() {
       const rawCred = sanitizeCredential(
         {
           ...req.body,
+          id: undefined, // the server always generates the credential ID
           issuingInstitution: req.body?.issuingInstitution || existing.currentInstitution,
+          // A student cannot claim that an institution or registrar issued their upload.
           issuingAuthority:
-            req.body?.issuingAuthority ||
-            (caller.role === 'STUDENT' ? 'APAAR Student Self-Attested & Vault Sealed' : caller.organization || 'Registrar'),
+            caller.role === 'STUDENT'
+              ? 'APAAR Student Self-Attested & Vault Sealed'
+              : req.body?.issuingAuthority || caller.organization || 'Registrar',
         },
         existing.currentInstitution,
         existing.apaarId
@@ -1755,25 +1783,23 @@ async function startServer() {
   app.get('/api/vault/document/:credentialId', requireAuth, async (req: AuthRequest, res: Response) => {
     try {
       const targetId = str(req.params.credentialId, 200);
-      const allStudents = await getAllStudentsStored();
-      for (const s of allStudents) {
-        const match = s.credentials.find(c => c.id === targetId || c.digilockerUri === targetId);
-        if (match) {
-          if (!match.documentDataUrl) {
-            return res.status(404).json({ error: 'No uploaded document file is attached to this Vault credential.' });
-          }
-          return res.json({
-            credentialId: match.id,
-            vaultUri: ensureVaultUri(match.digilockerUri, s.apaarId, match.id, match.type),
-            documentFileName: match.documentFileName || `${match.id}.pdf`,
-            documentMimeType: match.documentMimeType || 'application/octet-stream',
-            documentSizeBytes: match.documentSizeBytes || 0,
-            documentFileSha256: match.documentFileSha256 || '',
-            documentDataUrl: match.documentDataUrl,
-          });
-        }
+      const found = await findVisibleCredential(targetId, req.user!);
+      if (!found) {
+        return res.status(404).json({ error: 'Credential not found in APAAR Secure Vault.' });
       }
-      return res.status(404).json({ error: 'Credential not found in APAAR Secure Vault.' });
+      const { student: s, credential: match } = found;
+      if (!match.documentDataUrl) {
+        return res.status(404).json({ error: 'No uploaded document file is attached to this Vault credential.' });
+      }
+      return res.json({
+        credentialId: match.id,
+        vaultUri: ensureVaultUri(match.digilockerUri, s.apaarId, match.id, match.type),
+        documentFileName: match.documentFileName || `${match.id}.pdf`,
+        documentMimeType: match.documentMimeType || 'application/octet-stream',
+        documentSizeBytes: match.documentSizeBytes || 0,
+        documentFileSha256: match.documentFileSha256 || '',
+        documentDataUrl: match.documentDataUrl,
+      });
     } catch (err) {
       console.error('Error fetching vault document:', err);
       res.status(500).json({ error: 'Failed to fetch document from APAAR Secure Vault' });
@@ -1782,6 +1808,15 @@ async function startServer() {
 
   app.use('/api', (_req: Request, res: Response) => {
     res.status(404).json({ error: 'Not found' });
+  });
+
+  // Bad JSON, oversized bodies etc.: answer with JSON, never an HTML stack trace.
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    if (res.headersSent) return;
+    const tooLarge = err?.type === 'entity.too.large' || err?.status === 413;
+    const status = tooLarge ? 413 : typeof err?.status === 'number' && err.status < 500 ? err.status : 500;
+    if (status === 500) console.error('Unhandled error:', err);
+    res.status(status).json({ error: tooLarge ? 'Request is too large.' : status === 500 ? 'Internal server error.' : 'Bad request.' });
   });
 
   // ------------------------------------------------------------------
@@ -1808,13 +1843,22 @@ async function startServer() {
   });
 }
 
-async function configureDemoPasswords(): Promise<string | null> {
-  const configured = process.env.DEMO_PASSWORD || 'Apaar@2026';
-  const problem = validatePasswordStrength(configured);
+async function configureDemoPasswords(): Promise<void> {
+  const configured = (process.env.DEMO_PASSWORD || '').trim();
+  // Without DEMO_PASSWORD: in development default to Apaar@2026 for stable prototype testing;
+  // in production generate a random password nobody knows so demo accounts stay locked unless explicitly set.
+  const password = configured || (isProd ? `Demo-${crypto.randomBytes(9).toString('base64url')}-9a` : 'Apaar@2026');
+  const problem = validatePasswordStrength(password);
   if (problem) throw new Error(`DEMO_PASSWORD is too weak: ${problem}`);
-  await setSeedAccountPasswords(hashPassword(configured));
-  console.log(`[demo] Demo accounts ready with password: ${configured}`);
-  return configured;
+  await setSeedAccountPasswords(hashPassword(password));
+  if (isProd && !configured) {
+    console.log('[demo] Demo accounts are locked (set DEMO_PASSWORD to enable them).');
+  } else if (isProd) {
+    console.log('[demo] Demo accounts enabled with the DEMO_PASSWORD you configured.');
+  } else {
+    activeDevDemoPassword = password;
+    console.log(`[demo] Demo accounts ready with password: ${password}`);
+  }
 }
 
 startServer().catch(err => {
