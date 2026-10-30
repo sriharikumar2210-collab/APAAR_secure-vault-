@@ -33,7 +33,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         console.warn('Failed to read theme preference', e);
       }
     }
-    return 'dark';
+    return 'light';
   });
 
   useEffect(() => {

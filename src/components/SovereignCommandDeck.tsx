@@ -84,25 +84,25 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
         return {
           label: 'Company HR',
           icon: <Building2 className="w-3.5 h-3.5" />,
-          activeClass: 'bg-amber-500 text-slate-950 border-amber-400 shadow-xs',
+          activeClass: 'bg-[#E05A47] text-white border-[#E05A47] shadow-sm',
         };
       case 'STUDENT':
         return {
           label: 'Student',
           icon: <GraduationCap className="w-3.5 h-3.5" />,
-          activeClass: 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-xs',
+          activeClass: 'bg-[#0D766E] text-white border-[#0D766E] shadow-sm',
         };
       case 'INSTITUTION':
         return {
           label: 'College',
           icon: <Briefcase className="w-3.5 h-3.5" />,
-          activeClass: 'bg-sky-500 text-slate-950 border-sky-400 shadow-xs',
+          activeClass: 'bg-[#2563EB] text-white border-[#2563EB] shadow-sm',
         };
       case 'REGULATOR':
         return {
           label: 'Auditor',
           icon: <ShieldAlert className="w-3.5 h-3.5" />,
-          activeClass: 'bg-purple-500 text-white border-purple-400 shadow-xs',
+          activeClass: 'bg-[#7C3AED] text-white border-[#7C3AED] shadow-sm',
         };
     }
   };
@@ -110,14 +110,14 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
   return (
     <section
       aria-label="APAAR Smart Pass and Quick Actions"
-      className="border-b border-slate-200 dark:border-slate-800/90 bg-white/95 dark:bg-[#0d1422]/95 backdrop-blur-md transition-colors"
+      className="border-b border-[#E8E2D8] dark:border-[#2D2D32] bg-[#FAF8F5]/90 dark:bg-[#18181B]/90 backdrop-blur-md transition-colors"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Top Simple Bar: 1-Tap Role Switcher + Quick Student Search + Collapse Toggle */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
           {/* Left: 1-Tap Role Switcher Dock */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mr-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-stone-500 dark:text-stone-400 mr-1">
               Switch Role (1-Click):
             </span>
             {roleSwitchAccounts.map(acc => {
@@ -128,10 +128,10 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
                   key={acc.id}
                   type="button"
                   onClick={() => onSwitchRole?.(acc)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
                     isCurrent
                       ? meta.activeClass
-                      : 'bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      : 'bg-[#F3EFEA] dark:bg-[#27272A] text-stone-700 dark:text-stone-300 border-[#E5E0D6] dark:border-[#38383E] hover:bg-[#EAE4DA] dark:hover:bg-[#323238]'
                   }`}
                 >
                   {meta.icon}
@@ -144,31 +144,31 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
           {/* Right: Quick Search + Add Student + Collapse Pass */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative w-full sm:w-64">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={quickSearch}
                 onChange={e => setQuickSearch(e.target.value)}
                 placeholder="Search student or 12-digit APAAR ID..."
                 aria-label="Search student or 12-digit APAAR ID"
-                className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white dark:bg-[#242427] border border-[#E5E0D6] dark:border-[#38383E] text-xs text-stone-900 dark:text-stone-100 placeholder-stone-400 focus:outline-none focus:border-[#E05A47]"
               />
               {matchingStudents.length > 0 && (
-                <div className="absolute right-0 left-0 mt-1.5 bg-white dark:bg-[#0d1422] border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-50 divide-y divide-slate-100 dark:divide-slate-800 overflow-hidden">
+                <div className="absolute right-0 left-0 mt-1.5 bg-white dark:bg-[#242427] border border-[#E5E0D6] dark:border-[#38383E] rounded-2xl shadow-xl z-50 divide-y divide-stone-100 dark:divide-stone-800 overflow-hidden">
                   {matchingStudents.map(s => (
                     <div
                       key={s.apaarId}
-                      className="px-3 py-2 flex items-center justify-between gap-2 hover:bg-slate-50 dark:hover:bg-slate-800/80 text-xs"
+                      className="px-3.5 py-2.5 flex items-center justify-between gap-2 hover:bg-[#FAF8F5] dark:hover:bg-[#2A2A30] text-xs"
                     >
                       <div className="min-w-0">
-                        <div className="font-bold text-slate-900 dark:text-white truncate">
+                        <div className="font-semibold text-stone-900 dark:text-white truncate">
                           {s.name}
                         </div>
-                        <div className="font-mono text-[10px] text-amber-600 dark:text-amber-400 tabular-nums">
+                        <div className="font-mono text-[10px] text-[#E05A47] font-semibold tabular-nums">
                           {s.apaarId}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
                           onClick={() => {
@@ -176,7 +176,7 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
                             onSelectTab('employer-bgv');
                             setQuickSearch('');
                           }}
-                          className="px-2 py-1 rounded-lg bg-amber-500 text-slate-950 font-bold text-[10px] cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-[#E05A47] text-white font-semibold text-[10px] cursor-pointer"
                         >
                           HR Verify
                         </button>
@@ -187,7 +187,7 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
                             onSelectTab('student-portal');
                             setQuickSearch('');
                           }}
-                          className="px-2 py-1 rounded-lg bg-emerald-500 text-slate-950 font-bold text-[10px] cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-[#0D766E] text-white font-semibold text-[10px] cursor-pointer"
                         >
                           Vault
                         </button>
@@ -201,7 +201,7 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
             <button
               type="button"
               onClick={onOpenCreateStudentModal}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30 text-xs font-bold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border border-emerald-500/25 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Add Student</span>
@@ -210,9 +210,9 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
             <button
               type="button"
               onClick={() => setIsDeckExpanded(prev => !prev)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#F3EFEA] dark:bg-[#27272A] hover:bg-[#EAE4DA] dark:hover:bg-[#323238] text-stone-700 dark:text-stone-300 border border-[#E5E0D6] dark:border-[#38383E] text-xs font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer"
             >
-              <Fingerprint className="w-3.5 h-3.5 text-amber-500" />
+              <Fingerprint className="w-3.5 h-3.5 text-[#E05A47]" />
               <span>{isDeckExpanded ? 'Minimize Pass' : 'Show Smart Pass'}</span>
               {isDeckExpanded ? (
                 <ChevronUp className="w-3.5 h-3.5" />
@@ -225,20 +225,20 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
 
         {/* Main Deck: Interactive APAAR Smart Card + 3 Easy One-Click Action Cards */}
         {isDeckExpanded && (
-          <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-slate-800/80 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-            {/* Left 5 Cols: Interactive Flippable APAAR Smart Identity Pass */}
-            <div className="lg:col-span-5 flex flex-col justify-between rounded-2xl bg-gradient-to-br from-[#142033] to-[#0b1322] border-2 border-amber-500/50 p-4 shadow-md relative overflow-hidden apaar-card-engrave">
-              <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-700/70">
-                <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center">
+          <div className="mt-4 pt-4 border-t border-[#E8E2D8] dark:border-[#2D2D32] grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
+            {/* Left 5 Cols: Interactive Flippable APAAR Smart Identity Pass (Warm Card Design) */}
+            <div className="lg:col-span-5 flex flex-col justify-between rounded-2xl bg-gradient-to-br from-[#FFFDF9] via-[#FAF6EE] to-[#F5EFE4] dark:from-[#242427] dark:to-[#1C1C1F] border border-[#E2DDD4] dark:border-[#38383E] p-5 shadow-[0_6px_24px_-4px_rgba(28,25,23,0.08)] relative overflow-hidden apaar-card-engrave">
+              <div className="flex items-center justify-between gap-2 pb-3 border-b border-[#EAE5DC] dark:border-[#34343B]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-[#E05A47] to-[#C94634] text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
                     A
                   </div>
                   <div>
-                    <div className="text-xs font-bold tracking-wide text-amber-800 dark:text-amber-300">
+                    <div className="text-xs font-bold tracking-wide text-stone-900 dark:text-stone-100">
                       APAAR DIGITAL SMART CARD
                     </div>
-                    <div className="text-[10px] text-slate-600 dark:text-slate-300">
-                      12-Digit Student ID & Cryptographic Vault Pass
+                    <div className="text-[10px] text-stone-500 dark:text-stone-400">
+                      12-Digit Student ID &amp; Cryptographic Vault Pass
                     </div>
                   </div>
                 </div>
@@ -246,7 +246,7 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsCardFlipped(prev => !prev)}
-                  className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-900 dark:text-amber-300 border border-amber-500/50 text-[11px] font-bold flex items-center gap-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+                  className="px-2.5 py-1 rounded-xl bg-stone-900/5 hover:bg-stone-900/10 dark:bg-white/10 dark:hover:bg-white/15 text-stone-700 dark:text-stone-200 border border-stone-300 dark:border-stone-700 text-[11px] font-semibold flex items-center gap-1 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <RotateCw className="w-3 h-3" />
                   <span>{isCardFlipped ? 'Show Front' : 'Flip Card'}</span>
@@ -254,49 +254,49 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
               </div>
 
               {!isCardFlipped ? (
-                <div className="py-3 space-y-2.5">
+                <div className="py-3.5 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <span className="text-[10px] text-slate-600 dark:text-slate-400 font-semibold uppercase tracking-wider block">
+                      <span className="text-[10px] text-stone-500 dark:text-stone-400 font-semibold uppercase tracking-wider block">
                         12-Digit APAAR ID
                       </span>
-                      <div className="font-mono text-xl sm:text-2xl font-bold tracking-widest text-amber-600 dark:text-amber-400 tabular-nums">
+                      <div className="font-mono text-xl sm:text-2xl font-bold tracking-widest text-[#E05A47] dark:text-[#F87171] tabular-nums">
                         {currentStudent.apaarId}
                       </div>
                     </div>
-                    <div className="w-11 h-11 rounded-xl bg-white p-1 flex items-center justify-center shrink-0 border border-slate-200 shadow-xs">
-                      <QrCode className="w-9 h-9 text-slate-900" />
+                    <div className="w-12 h-12 rounded-xl bg-white p-1.5 flex items-center justify-center shrink-0 border border-stone-200 shadow-xs">
+                      <QrCode className="w-9 h-9 text-stone-900" />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                  <div className="grid grid-cols-2 gap-3 text-xs pt-1">
                     <div>
-                      <span className="text-[10px] text-slate-600 dark:text-slate-400 block">
+                      <span className="text-[10px] text-stone-500 dark:text-stone-400 block font-medium">
                         Student Name
                       </span>
-                      <span className="font-display font-bold text-slate-900 dark:text-white text-sm">
+                      <span className="font-display font-bold text-stone-900 dark:text-white text-sm">
                         {currentStudent.name}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-600 dark:text-slate-400 block">
+                      <span className="text-[10px] text-stone-500 dark:text-stone-400 block font-medium">
                         College / Institution
                       </span>
-                      <span className="text-slate-800 dark:text-slate-200 font-semibold truncate block">
+                      <span className="text-stone-800 dark:text-stone-200 font-medium truncate block">
                         {currentStudent.currentInstitution}
                       </span>
                     </div>
                   </div>
 
-                  <div className="pt-2 border-t border-slate-300 dark:border-slate-800/90 flex items-center justify-between gap-2 text-[11px]">
-                    <span className="font-mono text-emerald-700 dark:text-emerald-400 font-bold tabular-nums">
+                  <div className="pt-2.5 border-t border-[#EAE5DC] dark:border-[#34343B] flex items-center justify-between gap-2 text-[11px]">
+                    <span className="font-mono text-emerald-700 dark:text-emerald-400 font-semibold tabular-nums">
                       {currentStudent.credentials.length} Sealed Certificates
                     </span>
                     {primaryCredential && (
                       <button
                         type="button"
                         onClick={() => onInspectCredential(primaryCredential)}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] flex items-center gap-1 cursor-pointer shadow-xs"
+                        className="px-3 py-1 rounded-xl bg-[#0D766E] hover:bg-[#0B615B] text-white font-semibold text-[11px] flex items-center gap-1 cursor-pointer shadow-xs"
                       >
                         <Eye className="w-3 h-3" />
                         <span>View Certificate</span>
@@ -305,21 +305,21 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
                   </div>
                 </div>
               ) : (
-                <div className="py-3 space-y-2 text-[11px]">
-                  <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-300 font-mono font-bold">
+                <div className="py-3.5 space-y-2.5 text-[11px]">
+                  <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 font-mono font-bold">
                     <span>APAAR VAULT SEALED</span>
                     <span>7/7 OCR VERIFIED</span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 font-mono text-[10px] text-slate-300 space-y-1">
+                  <div className="p-3 rounded-xl bg-white/80 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800 font-mono text-[10px] text-stone-700 dark:text-stone-300 space-y-1">
                     <div className="truncate">
-                      <span className="text-slate-400">Vault DB: </span>
-                      <span className="text-amber-300">
+                      <span className="text-stone-400">Vault DB: </span>
+                      <span className="text-[#E05A47] font-semibold">
                         ai-studio-apaarstudentregi-c7b5f2d9-407c-48f5-be20-e42be25d8bde
                       </span>
                     </div>
                     <div className="truncate">
-                      <span className="text-slate-400">SHA-256: </span>
-                      <span className="text-emerald-400">
+                      <span className="text-stone-400">SHA-256: </span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                         {primaryCredential?.sha256Hash ||
                           'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
                       </span>
@@ -330,10 +330,10 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
                       <button
                         type="button"
                         onClick={() => onInspectCredential(primaryCredential)}
-                        className="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-1.5 rounded-xl bg-[#0D766E] hover:bg-[#0B615B] text-white font-semibold text-[11px] flex items-center gap-1 cursor-pointer shadow-xs"
                       >
                         <Eye className="w-3 h-3" />
-                        <span>Open & OCR Verify Certificate</span>
+                        <span>Open &amp; OCR Verify Certificate</span>
                       </button>
                     </div>
                   )}
@@ -341,10 +341,10 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
               )}
 
               {/* Bottom Student Selector */}
-              <div className="pt-2 border-t border-slate-700/70 flex items-center justify-between gap-2 text-[11px]">
+              <div className="pt-2.5 border-t border-[#EAE5DC] dark:border-[#34343B] flex items-center justify-between gap-2 text-[11px]">
                 <label
                   htmlFor="smart-pass-student-select"
-                  className="text-slate-700 dark:text-slate-300 font-semibold shrink-0"
+                  className="text-stone-600 dark:text-stone-400 font-medium shrink-0"
                 >
                   Change Student:
                 </label>
@@ -352,7 +352,7 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
                   id="smart-pass-student-select"
                   value={currentStudent.apaarId}
                   onChange={e => onSelectStudent(e.target.value)}
-                  className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2 py-1 text-[11px] text-slate-900 dark:text-amber-300 font-mono font-semibold focus:outline-none focus:border-amber-400"
+                  className="flex-1 bg-white dark:bg-[#1E1E22] border border-[#E5E0D6] dark:border-[#38383E] rounded-xl px-2 py-1 text-[11px] text-stone-900 dark:text-stone-100 font-mono font-medium focus:outline-none focus:border-[#E05A47]"
                 >
                   {students.map(s => (
                     <option key={s.apaarId} value={s.apaarId}>
@@ -364,42 +364,42 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
             </div>
 
             {/* Right 7 Cols: 3 Simple One-Click Actions */}
-            <div className="lg:col-span-7 flex flex-col justify-between bg-slate-50/90 dark:bg-[#111927] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
+            <div className="lg:col-span-7 flex flex-col justify-between bg-white dark:bg-[#242427] border border-[#E8E2D8] dark:border-[#2D2D32] rounded-2xl p-5 shadow-xs space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="font-display text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                  <h2 className="font-display text-base sm:text-lg font-bold text-stone-900 dark:text-stone-100">
                     Quick Actions — Choose What to Do in 1 Click
                   </h2>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                     Click any card below to verify a document with OCR, run an HR check, or open the Student Vault.
                   </p>
                 </div>
               </div>
 
               {/* 3 Big, Simple, Visual Action Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                 {/* Action 1: OCR Document Scanner */}
                 <button
                   type="button"
                   onClick={() => onSelectTab('doc-verification')}
-                  className={`text-left p-3.5 rounded-xl border transition-all flex flex-col justify-between cursor-pointer ${
+                  className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between cursor-pointer card-hover-lift ${
                     activeTab === 'doc-verification'
-                      ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/20'
-                      : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-emerald-500/60 hover:shadow-md'
+                      ? 'bg-emerald-500/10 border-[#0D766E] ring-2 ring-emerald-500/20'
+                      : 'bg-[#FAF8F5] dark:bg-[#1F1F23] border-[#E8E2D8] dark:border-[#38383E] hover:border-[#0D766E]/50'
                   }`}
                 >
                   <div>
-                    <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-[#0D766E] dark:text-emerald-400 flex items-center justify-center mb-3">
                       <ScanText className="w-5 h-5" />
                     </div>
-                    <div className="font-bold text-sm text-slate-900 dark:text-white">
+                    <div className="font-bold text-sm text-stone-900 dark:text-white">
                       1. OCR Document Verify
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 leading-relaxed">
                       Upload any certificate PDF/Image or scan Vault files via 7-field OCR.
                     </p>
                   </div>
-                  <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  <div className="mt-3.5 pt-2 border-t border-stone-200/60 dark:border-stone-800 flex items-center justify-between text-xs font-semibold text-[#0D766E] dark:text-emerald-400">
                     <span>Scan Certificate</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </div>
@@ -409,24 +409,24 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
                 <button
                   type="button"
                   onClick={() => onSelectTab('employer-bgv')}
-                  className={`text-left p-3.5 rounded-xl border transition-all flex flex-col justify-between cursor-pointer ${
+                  className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between cursor-pointer card-hover-lift ${
                     activeTab === 'employer-bgv'
-                      ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/20'
-                      : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-amber-500/60 hover:shadow-md'
+                      ? 'bg-[#E05A47]/10 border-[#E05A47] ring-2 ring-[#E05A47]/20'
+                      : 'bg-[#FAF8F5] dark:bg-[#1F1F23] border-[#E8E2D8] dark:border-[#38383E] hover:border-[#E05A47]/50'
                   }`}
                 >
                   <div>
-                    <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2.5">
+                    <div className="w-10 h-10 rounded-xl bg-[#E05A47]/15 text-[#E05A47] flex items-center justify-center mb-3">
                       <ShieldCheck className="w-5 h-5" />
                     </div>
-                    <div className="font-bold text-sm text-slate-900 dark:text-white">
-                      2. HR Check & Verify
+                    <div className="font-bold text-sm text-stone-900 dark:text-white">
+                      2. HR Check &amp; Verify
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      HR checks candidate APAAR ID, runs OCR verification & approves BGV.
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 leading-relaxed">
+                      HR checks candidate APAAR ID, runs OCR verification &amp; approves BGV.
                     </p>
                   </div>
-                  <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-amber-600 dark:text-amber-400">
+                  <div className="mt-3.5 pt-2 border-t border-stone-200/60 dark:border-stone-800 flex items-center justify-between text-xs font-semibold text-[#E05A47]">
                     <span>Open HR Workspace</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </div>
@@ -436,31 +436,31 @@ export const SovereignCommandDeck: React.FC<SovereignCommandDeckProps> = ({
                 <button
                   type="button"
                   onClick={() => onSelectTab('student-portal')}
-                  className={`text-left p-3.5 rounded-xl border transition-all flex flex-col justify-between cursor-pointer ${
+                  className={`text-left p-4 rounded-2xl border transition-all flex flex-col justify-between cursor-pointer card-hover-lift ${
                     activeTab === 'student-portal'
-                      ? 'bg-sky-500/15 border-sky-500 ring-2 ring-sky-500/20'
-                      : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 hover:border-sky-500/60 hover:shadow-md'
+                      ? 'bg-sky-500/10 border-sky-600 ring-2 ring-sky-500/20'
+                      : 'bg-[#FAF8F5] dark:bg-[#1F1F23] border-[#E8E2D8] dark:border-[#38383E] hover:border-sky-500/50'
                   }`}
                 >
                   <div>
-                    <div className="flex items-center justify-between mb-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center">
                         <FolderLock className="w-5 h-5" />
                       </div>
                       {pendingConsentCount > 0 && (
-                        <span className="px-2 py-0.5 rounded-md bg-rose-500 text-white text-[10px] font-bold">
+                        <span className="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
                           {pendingConsentCount} Pending
                         </span>
                       )}
                     </div>
-                    <div className="font-bold text-sm text-slate-900 dark:text-white">
+                    <div className="font-bold text-sm text-stone-900 dark:text-white">
                       3. Student Vault
                     </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                      Upload documents to APAAR Vault & approve or reject HR requests.
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1 leading-relaxed">
+                      Upload documents to APAAR Vault &amp; approve or reject HR requests.
                     </p>
                   </div>
-                  <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs font-bold text-sky-600 dark:text-sky-400">
+                  <div className="mt-3.5 pt-2 border-t border-stone-200/60 dark:border-stone-800 flex items-center justify-between text-xs font-semibold text-sky-600 dark:text-sky-400">
                     <span>Open My Vault</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </div>

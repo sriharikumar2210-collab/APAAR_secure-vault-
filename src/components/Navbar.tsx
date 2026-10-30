@@ -121,33 +121,33 @@ export const Navbar: React.FC<NavbarProps> = ({
     activeTab === 'lookup' || activeTab === 'insights' || activeTab === 'audit-trail';
 
   return (
-    <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0c121d]/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/90 shadow-xs transition-colors">
+    <header className="sticky top-0 z-40 bg-[#FAF8F5]/90 dark:bg-[#18181B]/90 backdrop-blur-md border-b border-[#E8E2D8] dark:border-[#2D2D32] shadow-[0_2px_12px_-2px_rgba(28,25,23,0.04)] transition-colors">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 gap-3">
-          {/* Zone 1: Simple & Clear Brand Wordmark */}
-          <div className="flex items-center gap-2.5 shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-slate-950 text-base shadow-xs">
+          {/* Zone 1: Simple & Clear Warm Brand Wordmark */}
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#E05A47] to-[#C94634] flex items-center justify-center font-extrabold text-white text-base shadow-[0_4px_12px_rgba(224,90,71,0.25)]">
               A
             </div>
             <div>
-              <span className="font-display font-bold text-slate-900 dark:text-slate-100 text-base tracking-tight block leading-none">
-                APAAR Vault
+              <span className="font-display font-bold text-stone-900 dark:text-stone-100 text-base tracking-tight block leading-tight">
+                APAAR Registry
               </span>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                Simple OCR & ID Verification
+              <span className="text-[11px] text-stone-500 dark:text-stone-400 font-medium tracking-normal block">
+                Academic Identity &amp; Vault
               </span>
             </div>
           </div>
 
           {/* Zone 2: 4 Simple Primary Navigation Buttons + More Dropdown */}
-          <nav className="flex items-center gap-1 sm:gap-1.5" aria-label="Main Navigation">
+          <nav className="flex items-center gap-1 sm:gap-2" aria-label="Main Navigation">
             <button
               type="button"
               onClick={() => setActiveTab('employer-bgv')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 min-h-[44px] text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                 activeTab === 'employer-bgv'
-                  ? 'bg-amber-500 text-slate-950 shadow-xs'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-[#E05A47] text-white shadow-sm'
+                  : 'text-stone-700 dark:text-stone-300 hover:bg-[#F3EFEA] dark:hover:bg-[#27272A]'
               }`}
             >
               <ShieldCheck className="w-4 h-4" />
@@ -157,10 +157,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('doc-verification')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 min-h-[44px] text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                 activeTab === 'doc-verification'
-                  ? 'bg-emerald-500 text-slate-950 shadow-xs'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-[#0D766E] text-white shadow-sm'
+                  : 'text-stone-700 dark:text-stone-300 hover:bg-[#F3EFEA] dark:hover:bg-[#27272A]'
               }`}
             >
               <FileCheck2 className="w-4 h-4" />
@@ -170,16 +170,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('student-portal')}
-              className={`relative flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`relative flex items-center gap-2 px-3.5 py-2 min-h-[44px] text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                 activeTab === 'student-portal'
-                  ? 'bg-sky-500 text-slate-950 shadow-xs'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-[#E05A47] text-white shadow-sm'
+                  : 'text-stone-700 dark:text-stone-300 hover:bg-[#F3EFEA] dark:hover:bg-[#27272A]'
               }`}
             >
               <UserCheck className="w-4 h-4" />
               <span>3. Student Vault</span>
               {pendingConsentCount > 0 && (
-                <span className="ml-0.5 px-1.5 py-0.2 text-[10px] font-bold rounded-md bg-rose-500 text-white">
+                <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-rose-500 text-white">
                   {pendingConsentCount}
                 </span>
               )}
@@ -188,10 +188,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={() => setActiveTab('registry')}
-              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-2 min-h-[44px] text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                 activeTab === 'registry'
-                  ? 'bg-amber-500 text-slate-950 shadow-xs'
-                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  ? 'bg-[#E05A47] text-white shadow-sm'
+                  : 'text-stone-700 dark:text-stone-300 hover:bg-[#F3EFEA] dark:hover:bg-[#27272A]'
               }`}
             >
               <Users className="w-4 h-4" />
@@ -203,10 +203,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={() => setIsMoreMenuOpen(prev => !prev)}
-                className={`flex items-center gap-1 px-2.5 py-2 text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`flex items-center gap-1.5 px-3 py-2 min-h-[44px] text-xs font-medium rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
                   isSecondaryTabActive
-                    ? 'bg-amber-500 text-slate-950 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    ? 'bg-[#E05A47] text-white shadow-sm font-semibold'
+                    : 'text-stone-600 dark:text-stone-300 hover:bg-[#F3EFEA] dark:hover:bg-[#27272A]'
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />

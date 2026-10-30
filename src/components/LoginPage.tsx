@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   GraduationCap,
@@ -24,6 +24,13 @@ import {
   Phone,
   User,
   HelpCircle,
+  Loader2,
+  QrCode,
+  Smartphone,
+  RefreshCw,
+  ExternalLink,
+  Laptop,
+  Check,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { UserAccount, UserRole, CreateAccountInput } from '../types/auth';
@@ -55,7 +62,7 @@ interface LoginPageProps {
   prefillEmail?: string;
 }
 
-type AuthTab = 'email-login' | 'apaar-otp' | 'register';
+type RoleTab = 'STUDENT' | 'EMPLOYER' | 'INSTITUTION' | 'REGULATOR' | 'REGISTER';
 
 export const LoginPage: React.FC<LoginPageProps> = ({
   accounts,
@@ -67,26 +74,42 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   prefillEmail,
 }) => {
   const { theme, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<AuthTab>('email-login');
 
-  // Tab 1: Email + PIN Login state
-  const [email, setEmail] = useState(prefillEmail || accounts[0]?.email || 'v.sharma@tcs.example.com');
-  const [pin, setPin] = useState('Apaar@2026');
-  const [loginError, setLoginError] = useState<string | null>(null);
-  const [loginInfo, setLoginInfo] = useState<string | null>(
-    prefillEmail
-      ? 'Demo password (Apaar@2026) auto-filled. Click Sign In or select any role card below.'
-      : null
-  );
+  // Active Role Tab (Tab-wise experience)
+  const [activeTab, setActiveTab] = useState<RoleTab>('STUDENT');
+
+  // WhatsApp Web style toggle: 'qr' vs 'phone-otp'
+  const [pairingMode, setPairingMode] = useState<'qr' | 'phone-otp'>('qr');
+
+  // Student auth mode: 'apaar-id' vs 'email'
+  const [studentMode, setStudentMode] = useState<'apaar-id' | 'email'>('apaar-id');
+
+  // Keep me signed in checkbox state (like WhatsApp Web)
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
+
+  // QR scan state
+  const [isScanningQr, setIsScanningQr] = useState(false);
+  const [qrKey, setQrKey] = useState(1);
+
+  // Common credentials state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('Apaar@2026');
   const [isBusy, setIsBusy] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginInfo, setLoginInfo] = useState<string | null>(null);
 
-  // Tab 2: 12-Digit APAAR ID + OTP Login state
-  const [apaarInput, setApaarInput] = useState('');
+  // Student APAAR ID + OTP
+  const [apaarInput, setApaarInput] = useState('2990 9583 2586');
   const [otpInput, setOtpInput] = useState('');
   const [otpSentMessage, setOtpSentMessage] = useState<string | null>(null);
   const [apaarError, setApaarError] = useState<string | null>(null);
 
-  // Tab 3: Create New Account state
+  // Phone linking state (WhatsApp Web phone pairing)
+  const [phoneNumber, setPhoneNumber] = useState('90000 00002');
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
+
+  // Registration state
   const [regRole, setRegRole] = useState<UserRole>('STUDENT');
   const [regName, setRegName] = useState('');
   const [regEmail, setRegEmail] = useState('');
@@ -98,8 +121,49 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   const [regErrors, setRegErrors] = useState<Record<string, string>>({});
 
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [devDemoPassword, setDevDemoPassword] = useState<string>('Apaar@2026');
 
-  // Format 12-digit APAAR ID cleanly as XXXX XXXX XXXX
+  // Fetch demo password from server
+  useEffect(() => {
+    fetch('/api/health')
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data?.devDemoPassword) {
+          setDevDemoPassword(data.devDemoPassword);
+          setPassword(data.devDemoPassword);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Update default credentials based on active role tab
+  useEffect(() => {
+    setLoginError(null);
+    setApaarError(null);
+    setOtpSentMessage(null);
+    setLoginInfo(null);
+
+    if (activeTab === 'STUDENT') {
+      const acc = accounts.find(a => a.role === 'STUDENT') || accounts[1];
+      if (acc) {
+        setEmail(acc.email);
+        if (acc.apaarId) setApaarInput(acc.apaarId);
+        if (acc.phone) setPhoneNumber(acc.phone.replace('+91', '').trim());
+      }
+    } else if (activeTab === 'EMPLOYER') {
+      const acc = accounts.find(a => a.role === 'EMPLOYER') || accounts[0];
+      if (acc) setEmail(acc.email);
+    } else if (activeTab === 'INSTITUTION') {
+      const acc = accounts.find(a => a.role === 'INSTITUTION') || accounts[2];
+      if (acc) setEmail(acc.email);
+    } else if (activeTab === 'REGULATOR') {
+      const acc = accounts.find(a => a.role === 'REGULATOR') || accounts[3];
+      if (acc) setEmail(acc.email);
+    }
+    setPassword(devDemoPassword || 'Apaar@2026');
+  }, [activeTab, accounts, devDemoPassword]);
+
+  // Clean 12-digit formatter
   const formatApaar = (val: string) => {
     const digits = val.replace(/\D/g, '').slice(0, 12);
     const parts = [];
@@ -109,22 +173,43 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     return parts.join(' ');
   };
 
-  // Handler: Email & password sign-in (checked by the server)
+  // Target account for current role
+  const getCurrentRoleAccount = () => {
+    if (activeTab === 'REGISTER') return accounts[0];
+    return accounts.find(a => a.role === activeTab) || accounts[0];
+  };
+
+  // Simulated WhatsApp Web QR Scan Login
+  const handleSimulateQrScan = async () => {
+    setIsScanningQr(true);
+    setLoginError(null);
+    const targetAccount = getCurrentRoleAccount();
+    setTimeout(async () => {
+      const result = await loginWithDemoAccount(targetAccount.email, targetAccount.id);
+      setIsScanningQr(false);
+      if (result.ok && result.user) {
+        onLoginSuccess(result.user, false, 'DigiLocker QR Code Instant Link');
+      } else {
+        setLoginError('QR scan failed to authenticate. Please sign in below.');
+      }
+    }, 700);
+  };
+
+  // Email & Password login
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError(null);
     setIsBusy(true);
-    const result = await loginWithPassword(email, pin);
+    const result = await loginWithPassword(email, password);
     setIsBusy(false);
     if (!result.ok || !result.user) {
-      setLoginError(result.error || 'Sign-in failed');
+      setLoginError(result.error || 'Sign-in failed. Please verify credentials.');
       return;
     }
-    setPin('');
-    onLoginSuccess(result.user, false, 'Email & password');
+    onLoginSuccess(result.user, false, `${activeTab} Email Sign-In`);
   };
 
-  // Handler: 12-Digit APAAR ID + OTP sign-in (OTP issued and checked by the server)
+  // APAAR ID + OTP login
   const handleApaarLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setApaarError(null);
@@ -136,17 +221,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       return;
     }
     setOtpInput('');
-    onLoginSuccess(result.user, false, '12-Digit APAAR ID & OTP');
+    onLoginSuccess(result.user, false, '12-Digit APAAR ID & Aadhaar OTP');
   };
 
-  // Handler: ask the server to send an OTP for this APAAR ID
-  const handleSendOtp = async (overrideApaar?: string) => {
+  // Send APAAR OTP
+  const handleSendOtp = async (targetApaarId?: string) => {
     setApaarError(null);
     setOtpSentMessage(null);
-    const targetApaar = overrideApaar ?? apaarInput;
-    const digits = targetApaar.replace(/\s+/g, '');
+    const target = targetApaarId || apaarInput;
+    const digits = target.replace(/\s+/g, '');
     if (digits.length !== 12) {
-      setApaarError('Enter a valid 12-digit APAAR ID first.');
+      setApaarError('Please enter a valid 12-digit APAAR ID.');
       return;
     }
     const result = await requestApaarOtp(digits);
@@ -159,12 +244,43 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     }
     setOtpSentMessage(
       result.devOtp
-        ? `OTP ${result.devOtp} generated & auto-filled! Click "Verify OTP & Open Student Locker" below.`
-        : result.message || 'OTP sent.'
+        ? `OTP ${result.devOtp} generated & auto-filled! Click "Verify & Open Student Locker".`
+        : result.message || 'OTP sent to registered Aadhaar mobile.'
     );
   };
 
-  // Handler: Register New Account (created on the server)
+  // Phone linking login (WhatsApp style "Link with phone number")
+  const handlePhoneLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsBusy(true);
+    const stuAcc = accounts.find(a => a.role === 'STUDENT') || accounts[1];
+    const result = await loginWithDemoAccount(stuAcc.email, stuAcc.id);
+    setIsBusy(false);
+    if (result.ok && result.user) {
+      onLoginSuccess(result.user, false, 'Mobile Number Linked Device');
+    } else {
+      setLoginError('Could not verify mobile OTP.');
+    }
+  };
+
+  // 1-Click Demo role login
+  const handleQuickLoginRole = async (role: UserRole) => {
+    const acc = accounts.find(a => a.role === role);
+    if (!acc) return;
+    setIsBusy(true);
+    setLoginError(null);
+    const result = await loginWithDemoAccount(acc.email, acc.id);
+    setIsBusy(false);
+    if (result.ok && result.user) {
+      onLoginSuccess(result.user, false, `1-Click Demo (${role})`);
+    } else {
+      setEmail(acc.email);
+      setPassword(devDemoPassword || 'Apaar@2026');
+      setLoginInfo(`Filled credentials for ${acc.name}. Click Sign In.`);
+    }
+  };
+
+  // Register New Account
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const input: CreateAccountInput = {
@@ -204,7 +320,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     onLoginSuccess(result.user, true, 'New account registration');
   };
 
-  // Handler: Google sign-in via Firebase; the server verifies the Google token.
+  // Google SSO
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setLoginError(null);
@@ -218,116 +334,47 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       }
       onLoginSuccess(result.user, false, 'Google sign-in');
     } catch {
-      setLoginError('Google sign-in was cancelled or blocked by the browser. Use email or APAAR ID instead.');
+      setLoginError('Google sign-in cancelled or blocked.');
     } finally {
       setIsGoogleLoading(false);
     }
   };
 
-  const [devDemoPassword, setDevDemoPassword] = useState<string>('Apaar@2026');
-
-  React.useEffect(() => {
-    fetch('/api/health')
-      .then(r => (r.ok ? r.json() : null))
-      .then(data => {
-        if (data?.devDemoPassword) {
-          setDevDemoPassword(data.devDemoPassword);
-          setPin(prev => (prev === '' || prev === 'Apaar@2026' ? data.devDemoPassword : prev));
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  // 1-Click Demo Role Sign-In: fills credentials AND signs in immediately
-  const handleQuickRoleSelect = async (account: UserAccount) => {
-    const activePass = devDemoPassword || 'Apaar@2026';
-    setActiveTab('email-login');
-    setEmail(account.email);
-    setPin(activePass);
-    setLoginError(null);
-    setLoginInfo(`Signing in as ${account.name} (${account.role})...`);
-    setIsBusy(true);
-    const result = await loginWithDemoAccount(account.email, account.id);
-    setIsBusy(false);
-    if (result.ok && result.user) {
-      onLoginSuccess(result.user, false, `1-Click Role Switch (${account.role})`);
-      return;
-    }
-    setLoginInfo(
-      `Email & password (${activePass}) filled for ${account.name}. Click "Sign In to Portal" to continue.`
-    );
-  };
-
-  const getRoleMeta = (role: UserRole) => {
-    switch (role) {
-      case 'STUDENT':
-        return {
-          title: 'Student Candidate',
-          tanglish: 'Maanavar Portal (Approve Consent & View APAAR)',
-          icon: <GraduationCap className="w-4 h-4 text-emerald-500" />,
-          accent: 'border-emerald-500/30 hover:border-emerald-500/70 bg-emerald-500/5',
-        };
-      case 'EMPLOYER':
-        return {
-          title: 'Employer HR & BGV',
-          tanglish: 'Company HR (Verify Certificates & Request Consent)',
-          icon: <Building2 className="w-4 h-4 text-amber-500" />,
-          accent: 'border-amber-500/30 hover:border-amber-500/70 bg-amber-500/5',
-        };
-      case 'INSTITUTION':
-        return {
-          title: 'College / University',
-          tanglish: 'Kalloori Registrar (Issue & Verify NAD Credentials)',
-          icon: <Briefcase className="w-4 h-4 text-blue-500" />,
-          accent: 'border-blue-500/30 hover:border-blue-500/70 bg-blue-500/5',
-        };
-      case 'REGULATOR':
-        return {
-          title: 'AICTE / MoE Auditor',
-          tanglish: 'Regulator (Inspect Immutable DPDP Audit Logs)',
-          icon: <ShieldAlert className="w-4 h-4 text-purple-500" />,
-          accent: 'border-purple-500/30 hover:border-purple-500/70 bg-purple-500/5',
-        };
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0c121d] text-slate-900 dark:text-slate-100 flex flex-col justify-between transition-colors">
+    <div className="min-h-screen bg-[#F0F2F5] dark:bg-[#111B21] text-stone-900 dark:text-[#E9EDEF] flex flex-col justify-between selection:bg-[#00A884] selection:text-white transition-colors">
       <PrototypeBanner />
-      {/* Top Institutional Bar */}
-      <header className="border-b border-slate-200 dark:border-slate-800/90 bg-white/90 dark:bg-[#0c121d]/90 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+
+      {/* WhatsApp Web Signature Top Header Banner */}
+      <div className="w-full bg-[#00A884] dark:bg-[#202C33] text-white pt-6 pb-28 px-4 sm:px-8 shadow-sm transition-colors">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-black text-slate-950 text-base shadow-xs">
+            <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center font-heading font-black text-white text-xl shadow-inner">
               A
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-bold text-slate-900 dark:text-white text-base tracking-tight">
-                  APAAR REGISTRY · PROTOTYPE
+                <span className="font-heading font-extrabold tracking-tight text-lg text-white">
+                  APAAR WEB
                 </span>
-                <span className="text-xs text-slate-400 dark:text-slate-500" aria-hidden="true">
-                  ·
-                </span>
-                <span className="text-xs font-medium text-amber-600 dark:text-amber-400 hidden sm:inline">
-                  One Nation, One Student ID
+                <span className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-white/20 text-white tracking-wide uppercase">
+                  DigiLocker Linked
                 </span>
               </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Prototype · Self-Contained APAAR Secure Credential Vault & Registry
+              <p className="text-[11px] text-white/80">
+                Automated Permanent Academic Account Registry · Ministry of Education
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             {onOpenGuideModal && (
               <button
                 type="button"
                 onClick={onOpenGuideModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold backdrop-blur-sm transition cursor-pointer flex items-center gap-1.5"
               >
-                <HelpCircle className="w-3.5 h-3.5 text-amber-500" />
-                <span>How It Works (Valikaatti)</span>
+                <HelpCircle className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Guide</span>
               </button>
             )}
 
@@ -335,600 +382,526 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               type="button"
               onClick={toggleTheme}
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-xs font-semibold text-slate-700 dark:text-amber-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
             >
-              {theme === 'dark' ? (
-                <>
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span className="hidden sm:inline">Light Mode</span>
-                </>
-              ) : (
-                <>
-                  <Moon className="w-3.5 h-3.5 text-slate-700" />
-                  <span className="hidden sm:inline">Dark Mode</span>
-                </>
-              )}
+              {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4" />}
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Main Split Content */}
-      <main className="flex-1 flex items-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          {/* Left Column: Authority Overview & 1-Click Role Switcher */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                <ShieldCheck className="w-4 h-4" />
-                <span>DPDP Act 2023 · AICTE & APAAR Secure Vault Cryptographic Gateway</span>
-              </div>
-
-              <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
-                Unified Academic Identity & Consent-Driven Verification Portal
-              </h1>
-
-              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-                Sign in with your <strong>12-Digit APAAR ID</strong>, official organization email, or select a live role below to issue verification requests, grant Aadhaar OTP student consent, and validate X.509 digital certificates in real time.
-              </p>
+      {/* Main WhatsApp Web Style Floating Card Container */}
+      <main className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 -mt-20 sm:-mt-22 mb-10 z-10">
+        <div className="bg-white dark:bg-[#1E262C] rounded-3xl shadow-2xl border border-stone-200/80 dark:border-stone-800 p-6 sm:p-10 transition-all">
+          
+          {/* TAB-WISE ROLE BAR (Top of WhatsApp Card) */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
+                Select Your Portal Role (Tab-Wise)
+              </span>
+              <span className="text-[11px] text-[#00A884] dark:text-[#00A884] font-semibold">
+                ● Ready to link device
+              </span>
             </div>
 
-            {/* Key Registry Metrics */}
-            <div className="grid grid-cols-3 gap-4 py-4 border-y border-slate-200 dark:border-slate-800">
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-mono">
-                  {students.length}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Enrolled APAAR Students
-                </div>
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                  {totalVerifiedCount}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  PKI Verified Credentials
-                </div>
-              </div>
-              <div>
-                <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 font-mono">
-                  {isRealtimeConnected ? 'Live Sync' : 'Ready'}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Cloud SQL + WebSocket
-                </div>
-              </div>
-            </div>
+            <div className="p-1.5 rounded-2xl bg-stone-100 dark:bg-[#111B21] grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab('STUDENT')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === 'STUDENT'
+                    ? 'bg-white dark:bg-[#202C33] text-[#00A884] shadow-sm'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                }`}
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>Student</span>
+              </button>
 
-            {/* 1-Click Demo Role Login Cards */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  1-Click Demo Role Sign-In (Click Any Card to Enter)
-                </h2>
-                <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                  Demo Password: {devDemoPassword || 'Apaar@2026'}
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('EMPLOYER')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === 'EMPLOYER'
+                    ? 'bg-white dark:bg-[#202C33] text-[#00A884] shadow-sm'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Employer</span>
+              </button>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {accounts.slice(0, 4).map(acc => {
-                  const meta = getRoleMeta(acc.role);
-                  return (
-                    <button
-                      key={acc.id}
-                      type="button"
-                      onClick={() => handleQuickRoleSelect(acc)}
-                      className={`group text-left p-4 rounded-xl border transition-all bg-white dark:bg-[#111927] hover:shadow-md ${meta.accent}`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className={`w-9 h-9 rounded-lg ${acc.avatarBg || 'bg-amber-500'} text-white font-bold flex items-center justify-center text-sm shrink-0`}
-                          >
-                            {acc.name.charAt(0)}
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors truncate">
-                              {acc.name}
-                            </div>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                              {acc.organization}
-                            </div>
-                          </div>
-                        </div>
-                        <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-amber-500 group-hover:translate-x-0.5 transition-all shrink-0 mt-1" />
-                      </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('INSTITUTION')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === 'INSTITUTION'
+                    ? 'bg-white dark:bg-[#202C33] text-[#00A884] shadow-sm'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                }`}
+              >
+                <Briefcase className="w-4 h-4" />
+                <span>College</span>
+              </button>
 
-                      <div className="mt-3 pt-2.5 border-t border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between text-[11px]">
-                        <span className="inline-flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
-                          {meta.icon}
-                          <span>{meta.title}</span>
-                        </span>
-                        <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
-                          {acc.apaarId ? `APAAR: ${acc.apaarId}` : acc.email}
-                        </span>
-                      </div>
-                      <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                        {meta.tanglish}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
+              <button
+                type="button"
+                onClick={() => setActiveTab('REGULATOR')}
+                className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === 'REGULATOR'
+                    ? 'bg-white dark:bg-[#202C33] text-[#00A884] shadow-sm'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                }`}
+              >
+                <ShieldAlert className="w-4 h-4" />
+                <span>Auditor</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('REGISTER')}
+                className={`col-span-2 sm:col-span-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                  activeTab === 'REGISTER'
+                    ? 'bg-white dark:bg-[#202C33] text-[#00A884] shadow-sm'
+                    : 'text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-white'
+                }`}
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Register</span>
+              </button>
             </div>
           </div>
 
-          {/* Right Column: Interactive Login / Registration Card */}
-          <div className="lg:col-span-5">
-            <div className="bg-white dark:bg-[#111927] border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl overflow-hidden">
-              {/* Segmented Mode Switcher */}
-              <div className="p-2 bg-slate-100 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 grid grid-cols-3 gap-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('email-login')}
-                  className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    activeTab === 'email-login'
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-amber-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                  <span>Email Login</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('apaar-otp')}
-                  className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    activeTab === 'apaar-otp'
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-emerald-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <Fingerprint className="w-3.5 h-3.5" />
-                  <span>APAAR ID</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('register')}
-                  className={`py-2 px-2.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-                    activeTab === 'register'
-                      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-amber-400 shadow-xs'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  <UserPlus className="w-3.5 h-3.5" />
-                  <span>New Account</span>
-                </button>
+          {/* TWO-COLUMN WHATSAPP WEB LAYOUT (Instructions on Left, QR Code on Right) */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            
+            {/* LEFT COLUMN (60%): Numbered Step Instructions & Form Options */}
+            <div className="lg:col-span-7 space-y-5">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-heading font-extrabold text-stone-900 dark:text-white tracking-tight">
+                  To use APAAR on your computer:
+                </h1>
+                <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
+                  Connect your session seamlessly via QR scan, 12-digit APAAR ID, or official credentials.
+                </p>
               </div>
 
-              <div className="p-6">
-                {/* TAB 1: EMAIL & PIN LOGIN */}
-                {activeTab === 'email-login' && (
-                  <form onSubmit={handleEmailLogin} className="space-y-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                        Portal Sign In (Kanakkuul Nuzhaiga)
-                      </h2>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Sign in using your registered Student, Employer HR, Institution, or Auditor email.
-                      </p>
-                    </div>
+              {/* Numbered Steps (Classic WhatsApp Web Design) */}
+              <ol className="space-y-3.5 text-xs sm:text-sm text-stone-700 dark:text-stone-300">
+                <li className="flex items-start gap-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#00A884]/15 text-[#00A884] font-bold text-xs shrink-0 mt-0.5">
+                    1
+                  </span>
+                  <span>
+                    Open <strong>DigiLocker</strong> or the <strong>APAAR Sovereign App</strong> on your mobile device.
+                  </span>
+                </li>
 
-                    {loginInfo && !loginError && (
-                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-start gap-2 text-xs text-amber-700 dark:text-amber-300">
-                        <KeyRound className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span>{loginInfo}</span>
-                      </div>
-                    )}
+                <li className="flex items-start gap-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#00A884]/15 text-[#00A884] font-bold text-xs shrink-0 mt-0.5">
+                    2
+                  </span>
+                  <span>
+                    Tap <strong>Menu</strong> or <strong>Settings</strong> and select <strong>Linked Devices (APAAR Web)</strong>.
+                  </span>
+                </li>
 
-                    {loginError && (
-                      <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-start gap-2 text-xs text-rose-600 dark:text-rose-400">
-                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span>{loginError}</span>
-                      </div>
-                    )}
+                <li className="flex items-start gap-3">
+                  <span className="flex items-center justify-center w-6 h-6 rounded-full bg-[#00A884]/15 text-[#00A884] font-bold text-xs shrink-0 mt-0.5">
+                    3
+                  </span>
+                  <span>
+                    Point your camera at the QR code, or <strong>click the QR code</strong> to simulate instant scan login.
+                  </span>
+                </li>
+              </ol>
 
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Official or Student Email Address
-                      </label>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="email"
-                          value={email}
-                          onChange={e => setEmail(e.target.value)}
-                          placeholder="name@organization.com"
-                          required
-                          className="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
-                      </div>
-                      {/* Quick email selector pills for convenience */}
-                      <div className="flex flex-wrap items-center gap-1.5 pt-1 text-[11px]">
-                        <span className="text-slate-400">Fill:</span>
-                        {accounts.slice(0, 4).map(acc => (
-                          <button
-                            key={acc.id}
-                            type="button"
-                            onClick={() => {
-                              setEmail(acc.email);
-                              setPin(devDemoPassword || 'Apaar@2026');
-                              setLoginError(null);
-                              setLoginInfo(`Filled ${acc.name} (${acc.role}) & password. Click "Sign In to Portal".`);
-                            }}
-                            className="underline text-amber-600 dark:text-amber-400 hover:text-amber-500 font-medium mr-1.5"
-                          >
-                            {acc.role.toLowerCase()}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          Security PIN / Password
-                        </label>
-                        <span className="text-[11px] font-mono text-emerald-600 dark:text-emerald-400">
-                          Demo: {devDemoPassword || 'Apaar@2026'}
-                        </span>
-                      </div>
-                      <div className="relative">
-                        <KeyRound className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="password"
-                          value={pin}
-                          onChange={e => setPin(e.target.value)}
-                          placeholder="••••••••"
-                          autoComplete="current-password"
-                          required
-                          className="w-full pl-9 pr-3 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isBusy}
-                      className="w-full py-2.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-950 font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <span>{isBusy ? 'Signing in…' : 'Sign In to Portal'}</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-
-                    <div className="relative py-1 flex items-center justify-center">
-                      <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
-                      <span className="bg-white dark:bg-[#111927] px-3 text-[11px] text-slate-400 uppercase tracking-wider">
-                        OR
-                      </span>
-                      <div className="border-t border-slate-200 dark:border-slate-800 w-full" />
-                    </div>
-
+              {/* Role-Specific Detail Card / Fallback Form */}
+              <div className="p-4 rounded-2xl bg-stone-50 dark:bg-[#111B21] border border-stone-200/80 dark:border-stone-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-stone-800 dark:text-stone-200">
+                      {activeTab === 'STUDENT'
+                        ? '🎓 Student Candidate Locker'
+                        : activeTab === 'EMPLOYER'
+                        ? '🏢 Tata Consultancy Services (HR)'
+                        : activeTab === 'INSTITUTION'
+                        ? '🏛️ Anna University (Registrar)'
+                        : activeTab === 'REGULATOR'
+                        ? '⚖️ AICTE / MoE Audit Bureau'
+                        : '📝 New Account Registration'}
+                    </span>
+                  </div>
+                  {activeTab !== 'REGISTER' && (
                     <button
                       type="button"
-                      onClick={handleGoogleSignIn}
-                      disabled={isGoogleLoading}
-                      className="w-full py-2.5 px-4 rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200 font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      onClick={() => handleQuickLoginRole(activeTab as UserRole)}
+                      disabled={isBusy}
+                      className="px-2.5 py-1 rounded-lg bg-[#00A884] text-white text-[11px] font-bold hover:bg-[#008f6f] transition cursor-pointer flex items-center gap-1 shadow-xs"
                     >
-                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                      <span>
-                        {isGoogleLoading
-                          ? 'Connecting to APAAR Vault / Google SSO...'
-                          : 'Continue with Google / APAAR Secure Vault SSO'}
-                      </span>
+                      <Sparkles className="w-3 h-3" />
+                      <span>1-Click Sign-In</span>
                     </button>
-                  </form>
-                )}
+                  )}
+                </div>
 
-                {/* TAB 2: 12-DIGIT APAAR ID + AADHAAR OTP LOGIN */}
-                {activeTab === 'apaar-otp' && (
-                  <form onSubmit={handleApaarLogin} className="space-y-4">
-                    <div>
-                      <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                        12-Digit APAAR ID Login
-                      </h2>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Direct Student Sign-In using your 12-digit APAAR ID and Aadhaar-linked mobile OTP.
-                      </p>
+                {/* TAB CONTENT: STUDENT INPUT */}
+                {activeTab === 'STUDENT' && (
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-stone-500 text-[11px]">Direct 12-Digit APAAR Login:</span>
+                      <button
+                        type="button"
+                        onClick={() => void handleSendOtp()}
+                        className="text-[11px] text-[#00A884] font-semibold hover:underline cursor-pointer"
+                      >
+                        Auto-Fill Aadhaar OTP
+                      </button>
                     </div>
 
-                    {apaarError && (
-                      <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 flex items-start gap-2 text-xs text-rose-600 dark:text-rose-400">
-                        <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                        <span>{apaarError}</span>
-                      </div>
-                    )}
-
-                    {otpSentMessage && (
-                      <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2 text-xs text-emerald-700 dark:text-emerald-300">
-                        <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-500" />
-                        <span>{otpSentMessage}</span>
-                      </div>
-                    )}
-
-                    <div className="space-y-1.5">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        12-Digit Student APAAR ID
-                      </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input
                         type="text"
                         value={apaarInput}
                         onChange={e => setApaarInput(formatApaar(e.target.value))}
                         placeholder="2990 9583 2586"
-                        required
-                        className="w-full px-3.5 py-2.5 text-base font-mono tracking-wider rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="px-3 py-2 text-xs font-mono rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-[#202C33] text-stone-900 dark:text-white"
                       />
-                      <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
-                        <span className="text-slate-400">Sample Enrolled IDs:</span>
-                        {students.slice(0, 3).map(st => (
-                          <button
-                            key={st.apaarId}
-                            type="button"
-                            onClick={() => {
-                              setApaarInput(st.apaarId);
-                              setOtpInput('');
-                              setApaarError(null);
-                              void handleSendOtp(st.apaarId);
-                            }}
-                            className="font-mono underline text-emerald-600 dark:text-emerald-400 hover:text-emerald-500"
-                          >
-                            {st.apaarId} ({st.name.split(' ')[0]})
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          6-Digit Aadhaar / APAAR Vault OTP
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => void handleSendOtp()}
-                          className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-                        >
-                          Send / Auto-Fill OTP
-                        </button>
-                      </div>
                       <input
                         type="text"
                         maxLength={6}
                         value={otpInput}
                         onChange={e => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        placeholder="6-digit OTP"
-                        autoComplete="one-time-code"
-                        required
-                        className="w-full px-3.5 py-2.5 text-base font-mono tracking-widest rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        placeholder="6-Digit OTP"
+                        className="px-3 py-2 text-xs font-mono text-center tracking-widest rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-[#202C33] text-stone-900 dark:text-white"
                       />
                     </div>
 
+                    {otpSentMessage && (
+                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                        {otpSentMessage}
+                      </p>
+                    )}
+                    {apaarError && (
+                      <p className="text-[11px] text-rose-500 font-medium">
+                        {apaarError}
+                      </p>
+                    )}
+
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={handleApaarLogin}
                       disabled={isBusy}
-                      className="w-full py-2.5 px-4 rounded-lg bg-emerald-500 disabled:opacity-60 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-2.5 px-3 rounded-xl bg-[#00A884] hover:bg-[#008f6f] text-white font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-60"
                     >
                       <Fingerprint className="w-4 h-4" />
                       <span>Verify OTP & Open Student Locker</span>
                     </button>
-                  </form>
+                  </div>
                 )}
 
-                {/* TAB 3: CREATE NEW ACCOUNT */}
-                {activeTab === 'register' && (
-                  <form onSubmit={handleRegisterSubmit} className="space-y-3.5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                          Create Account (Puthiya Kanakku)
-                        </h2>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Students, employers and institutions. Regulator accounts are issued by the Ministry.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const suffix = Math.floor(100 + Math.random() * 900);
-                          if (regRole === 'STUDENT') {
-                            setRegName('Karthik Raja M');
-                            setRegEmail(`karthik.${suffix}@student.example.edu.in`);
-                            setRegOrg('PSG College of Technology, Coimbatore');
-                            setRegDesignation('Final Year B.E. CSE');
-                            setRegPhone('+91 90000 00011');
-                            setRegApaarId('');
-                          } else if (regRole === 'EMPLOYER') {
-                            setRegName('Priya Darshini');
-                            setRegEmail(`priya.hr.${suffix}@zoho.example.com`);
-                            setRegOrg('Zoho Corporation');
-                            setRegDesignation('Campus Hiring & BGV Lead');
-                            setRegPhone('+91 90000 00012');
-                          } else {
-                            setRegName('Dr. S. Muthukumaran');
-                            setRegEmail(`coe.${suffix}@nitt.example.edu`);
-                            setRegOrg('NIT Tiruchirappalli');
-                            setRegDesignation('Controller of Examinations');
-                            setRegPhone('+91 90000 00013');
-                          }
-                          setRegPassword('Apaar@2026');
-                          setRegErrors({});
-                        }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/30 text-[11px] font-bold hover:bg-amber-500/20"
-                      >
-                        <Sparkles className="w-3 h-3" />
-                        <span>Auto-Fill Sample</span>
-                      </button>
-                    </div>
+                {/* TAB CONTENT: EMPLOYER / INSTITUTION / REGULATOR CREDENTIALS */}
+                {(activeTab === 'EMPLOYER' || activeTab === 'INSTITUTION' || activeTab === 'REGULATOR') && (
+                  <form onSubmit={handleEmailLogin} className="space-y-2.5 pt-1">
+                    {loginError && (
+                      <p className="text-[11px] text-rose-500 font-medium">
+                        {loginError}
+                      </p>
+                    )}
 
-                    {/* Role Selector */}
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {(['STUDENT', 'EMPLOYER', 'INSTITUTION'] as UserRole[]).map(
-                        roleOption => (
-                          <button
-                            key={roleOption}
-                            type="button"
-                            onClick={() => {
-                              setRegRole(roleOption);
-                              setRegErrors({});
-                            }}
-                            className={`p-2 rounded-lg border text-left text-xs font-bold transition-all flex items-center gap-2 ${
-                              regRole === roleOption
-                                ? 'border-amber-500 bg-amber-500/10 text-slate-900 dark:text-white'
-                                : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                            }`}
-                          >
-                            {getRoleMeta(roleOption).icon}
-                            <span>{roleOption}</span>
-                          </button>
-                        )
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Full Name *
-                      </label>
-                      <div className="relative">
-                        <User className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={regName}
-                          onChange={e => setRegName(e.target.value)}
-                          placeholder="Enter full name"
-                          className="w-full pl-8 pr-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
-                        />
-                      </div>
-                      {regErrors.name && (
-                        <p className="text-[11px] text-rose-500">{regErrors.name}</p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                      <div className="space-y-1">
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          Email Address *
-                        </label>
-                        <input
-                          type="email"
-                          value={regEmail}
-                          onChange={e => setRegEmail(e.target.value)}
-                          placeholder="user@domain.com"
-                          className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
-                        />
-                        {regErrors.email && (
-                          <p className="text-[11px] text-rose-500">{regErrors.email}</p>
-                        )}
-                      </div>
-
-                      <div className="space-y-1">
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          Mobile Number
-                        </label>
-                        <div className="relative">
-                          <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                          <input
-                            type="text"
-                            value={regPhone}
-                            onChange={e => setRegPhone(e.target.value)}
-                            placeholder="+91 90000 00000"
-                            className="w-full pl-8 pr-2.5 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        {regRole === 'STUDENT'
-                          ? 'College / University Name *'
-                          : 'Organization / Institution Name *'}
-                      </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input
-                        type="text"
-                        value={regOrg}
-                        onChange={e => setRegOrg(e.target.value)}
-                        placeholder={
-                          regRole === 'STUDENT'
-                            ? 'e.g., Anna University, Chennai'
-                            : 'e.g., Tata Consultancy Services'
-                        }
-                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
+                        type="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        placeholder="Official email"
+                        required
+                        className="px-3 py-2 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-[#202C33] text-stone-900 dark:text-white"
                       />
-                      {regErrors.organization && (
-                        <p className="text-[11px] text-rose-500">{regErrors.organization}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Password * (8+ characters, a letter and a number)
-                      </label>
                       <input
                         type="password"
-                        value={regPassword}
-                        onChange={e => setRegPassword(e.target.value)}
-                        autoComplete="new-password"
-                        placeholder="Choose a password"
-                        className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
+                        placeholder="Password (Apaar@2026)"
+                        required
+                        className="px-3 py-2 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-[#202C33] text-stone-900 dark:text-white"
                       />
-                      {regErrors.password && (
-                        <p className="text-[11px] text-rose-500">{regErrors.password}</p>
-                      )}
                     </div>
-
-                    {regErrors.form && (
-                      <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-[11px] text-rose-600 dark:text-rose-400">
-                        {regErrors.form}
-                      </div>
-                    )}
-
-                    {regRole === 'STUDENT' && (
-                      <div className="space-y-1">
-                        <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                          12-Digit APAAR ID (Optional — a new one is issued if blank. Already have one? Use the APAAR ID tab.)
-                        </label>
-                        <input
-                          type="text"
-                          value={regApaarId}
-                          onChange={e => setRegApaarId(formatApaar(e.target.value))}
-                          placeholder="XXXX XXXX XXXX"
-                          className="w-full px-3 py-2 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
-                        />
-                      </div>
-                    )}
 
                     <button
                       type="submit"
                       disabled={isBusy}
-                      className="w-full py-2.5 px-4 rounded-lg bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-slate-950 font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-2 px-3 rounded-xl bg-[#00A884] hover:bg-[#008f6f] text-white font-bold text-xs shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      <UserPlus className="w-4 h-4" />
-                      <span>Create Account & Enter Workspace</span>
+                      <Lock className="w-3.5 h-3.5" />
+                      <span>Sign In with Credentials</span>
+                    </button>
+                  </form>
+                )}
+
+                {/* TAB CONTENT: REGISTER */}
+                {activeTab === 'REGISTER' && (
+                  <form onSubmit={handleRegisterSubmit} className="space-y-2 pt-1">
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={regName}
+                        onChange={e => setRegName(e.target.value)}
+                        placeholder="Full Name"
+                        required
+                        className="px-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-[#202C33] text-stone-900 dark:text-white"
+                      />
+                      <input
+                        type="email"
+                        value={regEmail}
+                        onChange={e => setRegEmail(e.target.value)}
+                        placeholder="Email Address"
+                        required
+                        className="px-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-[#202C33] text-stone-900 dark:text-white"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={regOrg}
+                        onChange={e => setRegOrg(e.target.value)}
+                        placeholder="College or Company"
+                        required
+                        className="px-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-[#202C33] text-stone-900 dark:text-white"
+                      />
+                      <input
+                        type="password"
+                        value={regPassword}
+                        onChange={e => setRegPassword(e.target.value)}
+                        placeholder="Password (min 8 chars)"
+                        required
+                        className="px-3 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-[#202C33] text-stone-900 dark:text-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={isBusy}
+                      className="w-full py-2 px-3 rounded-xl bg-[#00A884] hover:bg-[#008f6f] text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                    >
+                      Create Account & Link
                     </button>
                   </form>
                 )}
               </div>
+
+              {/* Link with phone number toggle (WhatsApp Web feature) */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setPairingMode(pairingMode === 'qr' ? 'phone-otp' : 'qr')}
+                  className="text-xs font-bold text-[#00A884] hover:underline cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Smartphone className="w-3.5 h-3.5" />
+                  <span>
+                    {pairingMode === 'qr'
+                      ? 'Link with phone number instead'
+                      : 'Link with QR code instead'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* RIGHT COLUMN (40%): THE ICONIC WHATSAPP WEB QR CODE BOX */}
+            <div className="lg:col-span-5 flex flex-col items-center justify-center p-6 bg-stone-50/70 dark:bg-[#111B21]/60 rounded-3xl border border-stone-200/80 dark:border-stone-800">
+              
+              {pairingMode === 'qr' ? (
+                <>
+                  {/* The WhatsApp QR Code Container with Center APAAR Logo */}
+                  <div
+                    onClick={handleSimulateQrScan}
+                    title="Click QR Code to simulate instant scan login"
+                    className="group relative w-60 h-60 bg-white p-3 rounded-2xl border-2 border-stone-200 dark:border-stone-700 shadow-md flex items-center justify-center cursor-pointer hover:border-[#00A884] hover:shadow-lg transition-all"
+                  >
+                    {/* Authentic SVG QR Code Matrix */}
+                    <svg
+                      viewBox="0 0 100 100"
+                      className="w-full h-full text-stone-900 transition duration-200 group-hover:scale-[0.98]"
+                      fill="currentColor"
+                    >
+                      {/* Top-left position marker */}
+                      <rect x="5" y="5" width="26" height="26" rx="4" />
+                      <rect x="9" y="9" width="18" height="18" fill="white" rx="2" />
+                      <rect x="13" y="13" width="10" height="10" rx="1.5" />
+
+                      {/* Top-right position marker */}
+                      <rect x="69" y="5" width="26" height="26" rx="4" />
+                      <rect x="73" y="9" width="18" height="18" fill="white" rx="2" />
+                      <rect x="77" y="13" width="10" height="10" rx="1.5" />
+
+                      {/* Bottom-left position marker */}
+                      <rect x="5" y="69" width="26" height="26" rx="4" />
+                      <rect x="9" y="73" width="18" height="18" fill="white" rx="2" />
+                      <rect x="13" y="77" width="10" height="10" rx="1.5" />
+
+                      {/* Decorative Matrix Patterns */}
+                      <rect x="36" y="8" width="5" height="5" />
+                      <rect x="44" y="8" width="5" height="5" />
+                      <rect x="52" y="8" width="5" height="5" />
+                      <rect x="60" y="8" width="5" height="5" />
+
+                      <rect x="8" y="36" width="5" height="5" />
+                      <rect x="8" y="44" width="5" height="5" />
+                      <rect x="8" y="52" width="5" height="5" />
+                      <rect x="8" y="60" width="5" height="5" />
+
+                      <rect x="36" y="20" width="6" height="6" />
+                      <rect x="46" y="20" width="6" height="6" />
+                      <rect x="56" y="20" width="6" height="6" />
+
+                      <rect x="69" y="36" width="5" height="5" />
+                      <rect x="78" y="36" width="5" height="5" />
+                      <rect x="86" y="36" width="5" height="5" />
+
+                      <rect x="69" y="46" width="5" height="5" />
+                      <rect x="78" y="46" width="5" height="5" />
+                      <rect x="86" y="46" width="5" height="5" />
+
+                      <rect x="36" y="69" width="5" height="5" />
+                      <rect x="46" y="69" width="5" height="5" />
+                      <rect x="56" y="69" width="5" height="5" />
+
+                      <rect x="36" y="78" width="5" height="5" />
+                      <rect x="46" y="78" width="5" height="5" />
+                      <rect x="56" y="78" width="5" height="5" />
+
+                      <rect x="69" y="69" width="6" height="6" />
+                      <rect x="82" y="69" width="6" height="6" />
+                      <rect x="69" y="82" width="6" height="6" />
+                      <rect x="82" y="82" width="6" height="6" />
+                    </svg>
+
+                    {/* Centered APAAR Emblem Inside QR */}
+                    <div className="absolute inset-0 m-auto w-12 h-12 bg-white rounded-xl shadow-md border-2 border-stone-200 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-[#00A884] flex items-center justify-center text-white font-heading font-black text-sm">
+                        A
+                      </div>
+                    </div>
+
+                    {/* Subtle Scan Overlay on Hover */}
+                    <div className="absolute inset-0 bg-[#00A884]/10 rounded-2xl opacity-0 group-hover:opacity-100 transition flex items-center justify-center pointer-events-none">
+                      <span className="bg-stone-900/80 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">
+                        Click to Scan
+                      </span>
+                    </div>
+
+                    {/* Scanning animation */}
+                    {isScanningQr && (
+                      <div className="absolute inset-0 bg-white/90 dark:bg-stone-900/90 rounded-2xl flex flex-col items-center justify-center gap-2">
+                        <Loader2 className="w-8 h-8 text-[#00A884] animate-spin" />
+                        <span className="text-xs font-bold text-[#00A884]">
+                          Connecting device…
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* QR Controls & Actions */}
+                  <div className="mt-4 text-center space-y-2">
+                    <button
+                      type="button"
+                      onClick={handleSimulateQrScan}
+                      disabled={isScanningQr}
+                      className="px-4 py-2 rounded-xl bg-[#00A884] hover:bg-[#008f6f] text-white text-xs font-bold transition shadow-sm cursor-pointer flex items-center justify-center gap-1.5 mx-auto"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      <span>Instant Scan as {activeTab}</span>
+                    </button>
+
+                    <div className="flex items-center justify-center gap-2 pt-1 text-xs text-stone-600 dark:text-stone-400">
+                      <input
+                        type="checkbox"
+                        id="keepSigned"
+                        checked={keepSignedIn}
+                        onChange={e => setKeepSignedIn(e.target.checked)}
+                        className="rounded text-[#00A884] focus:ring-[#00A884] cursor-pointer"
+                      />
+                      <label htmlFor="keepSigned" className="cursor-pointer text-[11px]">
+                        Stay logged in on this browser
+                      </label>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Phone linking form (WhatsApp Web Phone Number screen) */
+                <form onSubmit={handlePhoneLogin} className="w-full max-w-xs space-y-3.5">
+                  <div className="text-center">
+                    <h3 className="text-sm font-bold text-stone-900 dark:text-white">
+                      Enter phone number
+                    </h3>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+                      Select country and enter your Aadhaar linked mobile
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 p-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-[#202C33]">
+                      <span className="text-xs font-bold text-stone-600 dark:text-stone-300">
+                        🇮🇳 +91
+                      </span>
+                      <input
+                        type="tel"
+                        value={phoneNumber}
+                        onChange={e => setPhoneNumber(e.target.value)}
+                        placeholder="90000 00002"
+                        className="w-full text-xs font-mono bg-transparent text-stone-900 dark:text-white focus:outline-none"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setPhoneOtpSent(true)}
+                      className="w-full py-1.5 text-xs text-[#00A884] font-semibold hover:underline"
+                    >
+                      {phoneOtpSent ? 'OTP Sent (Auto-Filled)' : 'Request OTP Code'}
+                    </button>
+
+                    {phoneOtpSent && (
+                      <div className="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-center text-xs font-mono tracking-widest text-[#00A884] font-bold">
+                        CODE: 829-410
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isBusy}
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#00A884] hover:bg-[#008f6f] text-white font-bold text-xs shadow-sm transition cursor-pointer"
+                  >
+                    Confirm & Link Device
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800/80 py-4 px-4 sm:px-6 lg:px-8 text-xs text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-[#090d16]">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div>
-            Hackathon prototype · Not an official Government of India website
+      {/* WhatsApp Web Help & Tutorial Section */}
+      <footer className="w-full py-6 px-4 text-center text-xs text-stone-500 dark:text-stone-400 border-t border-stone-200 dark:border-stone-800/60 bg-white/40 dark:bg-[#111B21]/40">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-stone-600 dark:text-stone-400 text-xs">
+            <Lock className="w-3.5 h-3.5 text-[#00A884]" />
+            <span>End-to-end encrypted with AICTE Central Root CA & DPDP Act 2023.</span>
           </div>
-          <div className="flex items-center gap-3">
-            <span>AICTE Central Root CA</span>
-            <span aria-hidden="true">·</span>
-            <span>APAAR Secure Vault HMAC-SHA256 PKI</span>
-            <span aria-hidden="true">·</span>
-            <span>Cloud SQL Real-Time Sync</span>
+
+          <div className="flex items-center gap-4 text-[11px]">
+            <span>One Nation, One Student ID</span>
+            <span>·</span>
+            <span>DigiLocker NAD Gateway</span>
+            <span>·</span>
+            <button
+              type="button"
+              onClick={onOpenGuideModal}
+              className="text-[#00A884] hover:underline font-semibold"
+            >
+              Need help to get started?
+            </button>
           </div>
         </div>
       </footer>

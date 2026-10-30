@@ -443,29 +443,29 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
       {/* Student Profile Header & Persona Selector */}
-      <div className="bg-[#111927] border border-slate-800 rounded-xl p-6 shadow-md">
+      <div className="bg-white dark:bg-[#242427] border border-[#E8E2D8] dark:border-[#2D2D32] rounded-2xl p-6 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-start gap-4">
-            <div className="w-14 h-14 rounded-full bg-slate-800 border-2 border-amber-500/60 flex items-center justify-center text-amber-400 font-bold text-xl shrink-0">
+            <div className="w-14 h-14 rounded-2xl bg-[#FAF8F5] dark:bg-[#1C1C1F] border-2 border-[#E05A47]/40 flex items-center justify-center text-[#E05A47] font-bold text-xl shrink-0 shadow-xs">
               {currentStudent.name.charAt(0)}
             </div>
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-xl font-bold text-white tracking-tight">{currentStudent.name}</h1>
-                <span className="text-xs text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2 py-0.5 rounded font-medium">
+                <h1 className="text-xl font-bold text-stone-900 dark:text-white tracking-tight">{currentStudent.name}</h1>
+                <span className="text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-semibold">
                   DPDP Act 2023 Protected
                 </span>
-                <span className="text-xs text-amber-400 bg-amber-950/60 border border-amber-800/80 px-2 py-0.5 rounded font-medium">
+                <span className="text-xs text-[#E05A47] dark:text-[#F87171] bg-[#E05A47]/10 border border-[#E05A47]/30 px-2.5 py-0.5 rounded-full font-semibold">
                   {currentStudent.stage}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
                 <span>
-                  APAAR ID: <strong className="font-mono text-slate-200">{currentStudent.apaarId}</strong>
+                  APAAR ID: <strong className="font-mono text-stone-800 dark:text-stone-200">{currentStudent.apaarId}</strong>
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>
-                  PEN: <span className="font-mono text-slate-300">{currentStudent.pen}</span>
+                  PEN: <span className="font-mono text-stone-700 dark:text-stone-300">{currentStudent.pen}</span>
                 </span>
                 <span aria-hidden="true">·</span>
                 <span>{currentStudent.currentInstitution}</span>
@@ -477,20 +477,20 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
           {/* Persona quick switcher */}
           <div className="flex flex-wrap items-center gap-2 self-end md:self-auto shrink-0">
-            <div className="flex items-center gap-2 bg-slate-900/80 p-2 rounded-lg border border-slate-800">
-              <User className="w-4 h-4 text-slate-400" />
+            <div className="flex items-center gap-2 bg-[#FAF8F5] dark:bg-[#1E1E22] p-2.5 rounded-xl border border-[#E5E0D6] dark:border-[#38383E]">
+              <User className="w-4 h-4 text-stone-500 dark:text-stone-400" />
               <div className="flex flex-col">
-                <label htmlFor="student-selector" className="text-[10px] text-slate-400 font-medium">
+                <label htmlFor="student-selector" className="text-[10px] text-stone-500 dark:text-stone-400 font-medium">
                   Switch Student View:
                 </label>
                 <select
                   id="student-selector"
                   value={currentStudent.apaarId}
                   onChange={e => onSelectStudent(e.target.value)}
-                  className="bg-transparent text-xs font-semibold text-amber-400 focus:outline-none cursor-pointer max-w-[220px]"
+                  className="bg-transparent text-xs font-semibold text-[#E05A47] dark:text-[#F87171] focus:outline-none cursor-pointer max-w-[220px]"
                 >
                   {allStudents.map(s => (
-                    <option key={s.apaarId} value={s.apaarId} className="bg-slate-900 text-white">
+                    <option key={s.apaarId} value={s.apaarId} className="bg-white dark:bg-[#242427] text-stone-900 dark:text-white">
                       {s.name} ({s.apaarId}) - {s.stage}
                     </option>
                   ))}
@@ -502,7 +502,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               <button
                 type="button"
                 onClick={onOpenCreateStudentModal}
-                className="px-2.5 py-2 text-xs font-bold rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center gap-1 shadow transition-colors"
+                className="px-3 py-2.5 min-h-[44px] text-xs font-semibold rounded-xl bg-[#0D766E] hover:bg-[#0B615B] text-white flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
                 title="Create / Register another student with APAAR ID"
               >
                 <UserPlus className="w-3.5 h-3.5" />
@@ -575,13 +575,13 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
       )}
 
       {/* Navigation tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-[#E8E2D8] dark:border-[#2D2D32] pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('pending')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'pending'
-              ? 'bg-amber-500 text-slate-950 shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-[#E05A47] text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-[#F3EFEA] dark:hover:bg-[#27272A]'
           }`}
         >
           <Bell className="w-4 h-4" />
@@ -595,35 +595,35 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
 
         <button
           onClick={() => setActiveTab('history')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'history'
-              ? 'bg-amber-500 text-slate-950 shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-[#E05A47] text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-[#F3EFEA] dark:hover:bg-[#27272A]'
           }`}
         >
           <Clock className="w-4 h-4" />
-          <span>Historical Verifications & Revocations</span>
-          <span className="text-xs text-slate-400">({historyRequests.length})</span>
+          <span>Historical Verifications &amp; Revocations</span>
+          <span className="text-xs text-stone-400">({historyRequests.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('preferences')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'preferences'
-              ? 'bg-amber-500 text-slate-950 shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-[#E05A47] text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-[#F3EFEA] dark:hover:bg-[#27272A]'
           }`}
         >
           <Lock className="w-4 h-4" />
-          <span>Consent Preferences & DPDP Rules</span>
+          <span>Consent Preferences &amp; DPDP Rules</span>
         </button>
 
         <button
           onClick={() => setActiveTab('vault')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 ${
+          className={`flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-xs font-semibold rounded-xl transition-all whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'vault'
-              ? 'bg-amber-500 text-slate-950 shadow-sm'
-              : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+              ? 'bg-[#E05A47] text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-[#F3EFEA] dark:hover:bg-[#27272A]'
           }`}
         >
           <FileCheck className="w-4 h-4" />
