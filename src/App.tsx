@@ -136,46 +136,26 @@ export default function App() {
   const [toastAlert, setToastAlert] = useState<SimulatedAlert | null>(null);
   const [alertHistory, setAlertHistory] = useState<SimulatedAlert[]>([]);
 
-  // Restore a previous session or auto-enter the default prototype session for zero-friction launch
+  // Restore a previous session if valid token exists; otherwise show Login Page immediately
   useEffect(() => {
+    const token = loadStoredSessionToken();
     const manualSignOut =
       typeof window !== 'undefined' && sessionStorage.getItem('apaar_manual_signout') === '1';
-    if (loadStoredSessionToken()) {
+
+    if (token && !manualSignOut) {
       restoreSession().then(user => {
         if (user) {
           setCurrentUser(user);
           routeToRoleWorkspace(user);
           setIsAuthenticated(true);
-          setIsRestoringSession(false);
-          return;
-        }
-        if (!manualSignOut) {
-          loginWithDemoAccount(currentUser.email, currentUser.id).then(res => {
-            if (res.ok && res.user) {
-              setCurrentUser(res.user);
-              routeToRoleWorkspace(res.user);
-            }
-            setIsAuthenticated(true);
-            setIsRestoringSession(false);
-          });
         } else {
-          setIsRestoringSession(false);
+          setIsAuthenticated(false);
         }
-      });
-      return;
-    }
-
-    if (!manualSignOut) {
-      loginWithDemoAccount(currentUser.email, currentUser.id).then(res => {
-        if (res.ok && res.user) {
-          setCurrentUser(res.user);
-          routeToRoleWorkspace(res.user);
-        }
-        setIsAuthenticated(true);
         setIsRestoringSession(false);
       });
     } else {
       setIsRestoringSession(false);
+      setIsAuthenticated(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -780,11 +760,11 @@ export default function App() {
     if (user.id === currentUser.id) return;
     const res = await loginWithDemoAccount(user.email, user.id);
     if (res.ok && res.user) {
-      handleSelectUser(res.user);
+      handleLoginSuccess(res.user, false, '1-Click Role Switch');
       return;
     }
-    handleSignOut();
-    setLoginPrefillEmail(user.email);
+    // Fallback: switch user directly
+    handleLoginSuccess(user, false, '1-Click Role Switch');
   };
 
   // Handler: Create and Activate New User Account

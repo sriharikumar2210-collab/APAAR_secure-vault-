@@ -406,6 +406,200 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
   .cert-grid{grid-template-columns:1fr}
   .seg{grid-template-columns:1fr 1fr}
 }
+
+/* =========================================================
+   APP VIEWS & SEPARATE MENU ROUTING
+   ========================================================= */
+.app-view {
+  animation: fadeInView .28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes fadeInView {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.view-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 5% 0;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.back-landing-btn {
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all .25s ease;
+}
+.back-landing-btn:hover {
+  background: var(--blue);
+  border-color: var(--blue);
+  box-shadow: 0 4px 18px rgba(74,79,240,.4);
+  transform: translateX(-3px);
+}
+.view-breadcrumb {
+  font-size: 12px;
+  color: var(--dim);
+  font-family: var(--mono);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.view-breadcrumb .active-crumb {
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.nav-links a.active {
+  color: #b9a8ff;
+}
+.nav-links a.active::after {
+  width: 100%;
+}
+
+.portal-badge-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(74,79,240,0.18);
+  border: 1px solid rgba(200,107,255,0.45);
+  color: #fff;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  letter-spacing: .3px;
+  transition: all .2s;
+}
+.portal-badge-link:hover {
+  background: var(--blue);
+  box-shadow: 0 4px 16px rgba(74,79,240,0.4);
+  transform: translateY(-1px);
+}
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
+  animation: pulseDot 2s infinite;
+}
+@keyframes pulseDot {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34,211,154,0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(34,211,154,0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(34,211,154,0); }
+}
+
+
+/* =========================================================
+   LOGIN SCREEN & USER DROPDOWN (DARK PALAIYA UI/UX)
+   ========================================================= */
+.login-roles-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.login-role-card {
+  background: var(--card-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.login-role-card:hover {
+  border-color: rgba(200,107,255,.5);
+  transform: translateY(-2px);
+}
+.login-role-card.sel {
+  border-color: var(--violet);
+  background: rgba(200,107,255,.1);
+  box-shadow: 0 0 16px rgba(200,107,255,.2);
+}
+.role-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  margin-bottom: 2px;
+}
+.login-role-card b {
+  font-size: 12px;
+  display: block;
+}
+.login-role-card small {
+  font-size: 10.5px;
+  color: var(--dim);
+}
+@media(max-width: 600px) {
+  .login-roles-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  width: 290px;
+  background: var(--card);
+  border: 1px solid rgba(200,107,255,.35);
+  border-radius: 18px;
+  padding: 12px;
+  box-shadow: 0 20px 40px rgba(0,0,0,.7);
+  display: none;
+  z-index: 100;
+  animation: pop .2s ease;
+}
+.user-dropdown.show {
+  display: block;
+}
+.user-dropdown-header {
+  padding: 8px 10px 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px;
+}
+.user-dropdown-header b {
+  display: block;
+  font-size: 13.5px;
+}
+.user-dropdown-header small {
+  color: var(--cyan);
+  font-size: 11px;
+}
+.user-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background .2s;
+  color: #fff;
+}
+.user-dropdown-item:hover {
+  background: rgba(255,255,255,.06);
+}
+
 </style>
 </head>
 <body>
@@ -416,7 +610,7 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
 
   <!-- ================= NAVBAR ================= -->
   <nav class="nav">
-    <a href="#top" class="logo">
+    <a href="#landing" class="logo" onclick="event.preventDefault();go('#landing')">
       <svg class="logo-mark" viewBox="0 0 42 42" fill="none">
         <defs><linearGradient id="lg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3a5bd9"/><stop offset="1" stop-color="#c86bff"/></linearGradient></defs>
         <circle cx="21" cy="21" r="19" stroke="url(#lg)" stroke-width="2"/>
@@ -428,24 +622,61 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
     </a>
 
     <ul class="nav-links" id="navLinks">
-      <li><a href="#hr">1. HR Verify</a></li>
-      <li><a href="#ocr">2. OCR Scanner</a></li>
-      <li><a href="#vault">3. Student Vault <span class="badge" id="navPending">2</span></a></li>
-      <li><a href="#registry">4. Students</a></li>
-      <li><a href="#audit">Audit</a></li>
-      <li><a href="#compliance">More</a></li>
+      <li><a href="#landing" id="nav-landing" class="active">Landing Page</a></li>
+      <li><a href="#hr" id="nav-hr">1. HR Verify</a></li>
+      <li><a href="#ocr" id="nav-ocr">2. OCR Scanner</a></li>
+      <li><a href="#vault" id="nav-vault">3. Student Vault <span class="badge" id="navPending">2</span></a></li>
+      <li><a href="#registry" id="nav-registry">4. Students</a></li>
+      <li><a href="#audit" id="nav-audit">Audit</a></li>
+      <li><a href="#compliance" id="nav-compliance">AICTE Matrix</a></li>
     </ul>
 
     <div class="nav-right">
-      <button class="icon-btn" title="Notifications" onclick="go('#vault')">
+      <button class="icon-btn" title="Student Vault Notifications" onclick="go('#vault')">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>
         <span class="badge dot" id="bellCount">2</span>
       </button>
-      <div class="user-chip" id="userChip">
-        <span class="avatar" id="userAv">A</span>
-        <span class="name" id="userName">Abinaya</span>
-        <span class="role-tag" id="userRole">Student</span>
+      <div style="position: relative;">
+        <div class="user-chip" id="userChip" onclick="toggleUserDropdown(event)" title="Click to Switch User / Sign Out">
+          <span class="avatar" id="userAv">A</span>
+          <span class="name" id="userName">Abinaya</span>
+          <span class="role-tag" id="userRole">Student</span>
+          <span style="font-size: 10px; opacity: 0.8;">▼</span>
+        </div>
+
+        <div class="user-dropdown" id="userDropdown">
+          <div class="user-dropdown-header">
+            <b id="ddName">Abinaya S</b>
+            <small id="ddRole">Student · Govt. College of Tech</small>
+            <div class="mono" style="font-size: 10px; color: var(--dim); margin-top: 3px;" id="ddId">APAAR: 2990 9583 2586</div>
+          </div>
+          <div style="font-size: 10px; text-transform: uppercase; color: var(--muted); padding: 4px 10px 6px; font-weight: 700; letter-spacing: 0.5px;">
+            Switch Active User
+          </div>
+          <div class="user-dropdown-item" onclick="switchUserRole('student')">
+            <span>🎓</span>
+            <div><b>Abinaya S</b><small style="display:block;color:var(--dim);font-size:10px">Student · Govt College of Tech</small></div>
+          </div>
+          <div class="user-dropdown-item" onclick="switchUserRole('hr')">
+            <span>🏢</span>
+            <div><b>Vikramaditya Sharma</b><small style="display:block;color:var(--dim);font-size:10px">Company HR · Nimbus Tech</small></div>
+          </div>
+          <div class="user-dropdown-item" onclick="switchUserRole('college')">
+            <span>🏛</span>
+            <div><b>Dr. K. Ravichandran</b><small style="display:block;color:var(--dim);font-size:10px">Dean · Anna University</small></div>
+          </div>
+          <div class="user-dropdown-item" onclick="switchUserRole('auditor')">
+            <span>⚖️</span>
+            <div><b>P. K. Meena</b><small style="display:block;color:var(--dim);font-size:10px">Auditor · AICTE Bureau</small></div>
+          </div>
+          <div style="height: 1px; background: var(--line); margin: 8px 0;"></div>
+          <div class="user-dropdown-item" onclick="openLoginModal()" style="color: var(--bad);">
+            <span>🚪</span>
+            <b>Sign Out / Open Login Page</b>
+          </div>
+        </div>
       </div>
+      <button class="btn btn-outline btn-sm" onclick="openLoginModal()" style="font-size: 11px; padding: 6px 14px;">Sign In</button>
       <button class="hamburger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
     </div>
   </nav>
@@ -458,7 +689,10 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
     <button class="role-btn" data-role="auditor">Auditor</button>
   </div>
 
-  <!-- ================= HERO ================= -->
+  
+  <!-- ================= 1. LANDING PAGE VIEW ================= -->
+  <div id="view-landing" class="app-view">
+<!-- ================= HERO ================= -->
   <header class="hero" id="top">
     <svg class="contours" viewBox="0 0 1360 640" preserveAspectRatio="xMidYMid slice">
       <defs>
@@ -535,16 +769,15 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
     </div>
     <div class="scroll"></div>
   </header>
-
-  <!-- ================= STATS ================= -->
-  <section class="block reveal" id="registry" style="padding-top:20px">
+<!-- ================= STATS OVERVIEW ================= -->
+  <section class="block reveal" style="padding-top:20px">
     <div class="sec-head">
       <div>
         <div class="tag">Live Verified Ledger</div>
-        <h2>National APAAR Registry</h2>
-        <p>Search, filter, and onboard student records with tamper-proof 12-digit APAAR IDs and APAAR Secure Vault credentials.</p>
+        <h2>National APAAR Registry Overview</h2>
+        <p>Live metrics across all enrolled student records, active academic sessions, and verified credential vaults.</p>
       </div>
-      <button class="btn btn-blue" onclick="toast('Register New Student form opened (demo)')">+ Register New Student</button>
+      <button class="btn btn-blue" onclick="go('#registry')">Open Full Students Directory →</button>
     </div>
     <div class="stats">
       <div class="stat"><small>Total Enrolled</small><div class="num" data-count="66">0</div><span>National student records</span></div>
@@ -553,50 +786,61 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
       <div class="stat" style="--accent:var(--warn)"><small>Consent Pending</small><div class="num" data-count="6">0</div><span>Awaiting statutory sign-off</span></div>
       <div class="stat" style="--accent:var(--bad)"><small>Aadhaar Mismatch</small><div class="num" data-count="5">0</div><span>Requires demographic sync</span></div>
     </div>
-
-    <div class="table-wrap" style="margin-top:22px">
-      <table>
-        <thead><tr><th>APAAR ID</th><th>Student</th><th>Stage</th><th>Current Institution</th><th>District</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody id="studentRows"></tbody>
-      </table>
-    </div>
   </section>
 
   <div class="divider"></div>
-
-  <!-- ================= QUICK ACTIONS ================= -->
+<!-- ================= QUICK ACTIONS ================= -->
   <section class="block reveal">
     <div class="sec-head">
       <div>
-        <div class="tag">Quick Actions</div>
-        <h2>Choose what to do in 1 click</h2>
-        <p>Verify a document with OCR, run an HR check, or open the Student Vault.</p>
+        <div class="tag">Portal Modules &amp; Workspaces</div>
+        <h2>Select a Workspace or Action</h2>
+        <p>Direct access to dedicated portals for HR background checks, OCR document inspections, student sovereign consent, and registry analytics.</p>
       </div>
     </div>
-    <div class="qa">
-      <div class="qa-card" onclick="go('#ocr')">
-        <div class="qa-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1aa3ff" stroke-width="2"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8 10h8M8 14h5"/></svg></div>
-        <h3>1. OCR Document Verify</h3>
-        <p>Upload any certificate PDF/Image or scan Vault files via 7-field OCR.</p>
-        <div class="go-link">Scan Certificate <span>→</span></div>
-      </div>
+    <div class="qa" style="grid-template-columns:repeat(3,1fr)">
       <div class="qa-card" onclick="go('#hr')">
         <div class="qa-icon" style="background:rgba(200,107,255,.16)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c86bff" stroke-width="2"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
-        <h3>2. HR Check &amp; Verify</h3>
-        <p>HR checks candidate APAAR ID, runs OCR verification &amp; approves BGV.</p>
+        <h3>1. HR Background Check</h3>
+        <p>HR verifiers search candidate APAAR ID, choose credential scopes, and dispatch authenticated petitions.</p>
         <div class="go-link" style="color:var(--violet)">Open HR Workspace <span>→</span></div>
+      </div>
+      <div class="qa-card" onclick="go('#ocr')">
+        <div class="qa-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1aa3ff" stroke-width="2"><path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/><path d="M8 10h8M8 14h5"/></svg></div>
+        <h3>2. OCR &amp; Vault Verifier</h3>
+        <p>Inspect degrees and marksheets via 7-field OCR cross-matched against APAAR Secure Vault HMAC-SHA256 seals.</p>
+        <div class="go-link">Scan &amp; Verify Document <span>→</span></div>
       </div>
       <div class="qa-card" onclick="go('#vault')">
         <span class="pill-bad" id="qaPending">2 Pending</span>
         <div class="qa-icon" style="background:rgba(34,211,154,.14)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22d39a" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
-        <h3>3. Student Vault</h3>
-        <p>Upload documents to APAAR Vault &amp; approve or reject HR requests.</p>
-        <div class="go-link" style="color:var(--ok)">Open My Vault <span>→</span></div>
+        <h3>3. Student Consent Vault</h3>
+        <p>Students manage sovereign consent under DPDP Act 2023, authorize requests, or revoke active employer access.</p>
+        <div class="go-link" style="color:var(--ok)">Open Student Vault <span>→</span></div>
+      </div>
+      <div class="qa-card" onclick="go('#registry')">
+        <div class="qa-icon" style="background:rgba(255,181,71,.16)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffb547" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+        <h3>4. Student Directory &amp; Analytics</h3>
+        <p>Explore nationwide student records, stage progressions, district analytics, and enrollment statistics.</p>
+        <div class="go-link" style="color:var(--warn)">Browse Directory <span>→</span></div>
+      </div>
+      <div class="qa-card" onclick="go('#audit')">
+        <div class="qa-icon" style="background:rgba(122,108,240,.18)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7a6cf0" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <h3>5. DPDP Audit Ledger</h3>
+        <p>Cryptographic ledger recording all access events, status changes, and verifications with SHA-256 fingerprinting.</p>
+        <div class="go-link" style="color:#b9a8ff">View Audit Trail <span>→</span></div>
+      </div>
+      <div class="qa-card" onclick="go('#compliance')">
+        <div class="qa-icon" style="background:rgba(34,211,154,.18)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22d39a" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+        <h3>6. AICTE Compliance Matrix</h3>
+        <p>Review 10-point solution requirements, automated intake caps, duplicate detectors, and policy rules.</p>
+        <div class="go-link" style="color:var(--ok)">Check Compliance <span>→</span></div>
       </div>
     </div>
   </section>
 
-  <!-- ================= HOW IT WORKS (STEPPER) ================= -->
+  <div class="divider"></div>
+<!-- ================= HOW IT WORKS (STEPPER) ================= -->
   <section class="block reveal" id="how">
     <div class="sec-head">
       <div>
@@ -614,10 +858,18 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
     </div>
     <div class="progress"><i id="stepBar" style="width:25%"></i></div>
   </section>
+  </div>
 
-  <div class="divider"></div>
-
-  <!-- ================= HR VERIFY ================= -->
+  <!-- ================= 2. HR VERIFY VIEW ================= -->
+  <div id="view-hr" class="app-view" style="display:none">
+    <div class="view-header-bar">
+      <button class="back-landing-btn" onclick="go('#landing')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to Landing Page
+      </button>
+      <div class="view-breadcrumb">Workspace &gt; <span class="active-crumb">1. HR Background Verification</span></div>
+    </div>
+<!-- ================= HR VERIFY ================= -->
   <section class="block reveal" id="hr">
     <div class="sec-head">
       <div>
@@ -665,10 +917,18 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
       </div>
     </div>
   </section>
+  </div>
 
-  <div class="divider"></div>
-
-  <!-- ================= OCR SCANNER ================= -->
+  <!-- ================= 3. OCR SCANNER VIEW ================= -->
+  <div id="view-ocr" class="app-view" style="display:none">
+    <div class="view-header-bar">
+      <button class="back-landing-btn" onclick="go('#landing')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to Landing Page
+      </button>
+      <div class="view-breadcrumb">Workspace &gt; <span class="active-crumb">2. OCR &amp; Credential Vault</span></div>
+    </div>
+<!-- ================= OCR SCANNER ================= -->
   <section class="block reveal" id="ocr">
     <div class="sec-head">
       <div>
@@ -726,10 +986,8 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
       </div>
     </div>
   </section>
-
-  <div class="divider"></div>
-
-  <!-- ================= VALIDATION ENGINE ================= -->
+    <div class="divider"></div>
+<!-- ================= VALIDATION ENGINE ================= -->
   <section class="block reveal" id="upload">
     <div class="sec-head">
       <div>
@@ -762,10 +1020,18 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
       </div>
     </div>
   </section>
+  </div>
 
-  <div class="divider"></div>
-
-  <!-- ================= STUDENT VAULT / CONSENT ================= -->
+  <!-- ================= 4. STUDENT VAULT VIEW ================= -->
+  <div id="view-vault" class="app-view" style="display:none">
+    <div class="view-header-bar">
+      <button class="back-landing-btn" onclick="go('#landing')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to Landing Page
+      </button>
+      <div class="view-breadcrumb">Workspace &gt; <span class="active-crumb">3. Student Sovereign Consent Vault</span></div>
+    </div>
+<!-- ================= STUDENT VAULT / CONSENT ================= -->
   <section class="block reveal" id="vault">
     <div class="sec-head">
       <div>
@@ -785,10 +1051,57 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
       </table>
     </div>
   </section>
+  </div>
 
-  <div class="divider"></div>
+  <!-- ================= 5. STUDENTS REGISTRY VIEW ================= -->
+  <div id="view-registry" class="app-view" style="display:none">
+    <div class="view-header-bar">
+      <button class="back-landing-btn" onclick="go('#landing')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to Landing Page
+      </button>
+      <div class="view-breadcrumb">Workspace &gt; <span class="active-crumb">4. Students Directory &amp; Analytics</span></div>
+    </div>
+<section class="block reveal" id="registry" style="padding-top:20px">
+    <div class="sec-head">
+      <div>
+        <div class="tag">Live Verified Ledger</div>
+        <h2>National APAAR Registry</h2>
+        <p>Search, filter, and onboard student records with tamper-proof 12-digit APAAR IDs and APAAR Secure Vault credentials.</p>
+      </div>
+      <button class="btn btn-blue" onclick="toast('Register New Student form opened (demo)')">+ Register New Student</button>
+    </div>
 
-  <!-- ================= AUDIT TRAIL ================= -->
+    <div class="table-wrap" style="margin-top:22px">
+      <table>
+        <thead><tr><th>APAAR ID</th><th>Student</th><th>Stage</th><th>Current Institution</th><th>District</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="studentRows"></tbody>
+      </table>
+    </div>
+  </section>
+    <div class="divider"></div>
+<!-- ================= ANALYTICS ================= -->
+  <section class="block reveal">
+    <div class="sec-head">
+      <div><div class="tag">Real-Time Dashboards</div><h2>Registry Analytics</h2></div>
+    </div>
+    <div class="two">
+      <div class="panel"><h3 style="font-size:15px;margin-bottom:10px">Students by stage</h3><div id="stageBars"></div></div>
+      <div class="panel"><h3 style="font-size:15px;margin-bottom:10px">Students by district</h3><div id="districtBars"></div></div>
+    </div>
+  </section>
+  </div>
+
+  <!-- ================= 6. AUDIT TRAIL VIEW ================= -->
+  <div id="view-audit" class="app-view" style="display:none">
+    <div class="view-header-bar">
+      <button class="back-landing-btn" onclick="go('#landing')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to Landing Page
+      </button>
+      <div class="view-breadcrumb">Workspace &gt; <span class="active-crumb">5. Verification Audit Trail</span></div>
+    </div>
+<!-- ================= AUDIT TRAIL ================= -->
   <section class="block reveal" id="audit">
     <div class="sec-head">
       <div>
@@ -812,21 +1125,18 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
       </table>
     </div>
   </section>
+  </div>
 
-  <div class="divider"></div>
-
-  <!-- ================= ANALYTICS ================= -->
-  <section class="block reveal">
-    <div class="sec-head">
-      <div><div class="tag">Real-Time Dashboards</div><h2>Registry Analytics</h2></div>
+  <!-- ================= 7. AICTE COMPLIANCE VIEW ================= -->
+  <div id="view-compliance" class="app-view" style="display:none">
+    <div class="view-header-bar">
+      <button class="back-landing-btn" onclick="go('#landing')">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to Landing Page
+      </button>
+      <div class="view-breadcrumb">Workspace &gt; <span class="active-crumb">6. AICTE Compliance Matrix</span></div>
     </div>
-    <div class="two">
-      <div class="panel"><h3 style="font-size:15px;margin-bottom:10px">Students by stage</h3><div id="stageBars"></div></div>
-      <div class="panel"><h3 style="font-size:15px;margin-bottom:10px">Students by district</h3><div id="districtBars"></div></div>
-    </div>
-  </section>
-
-  <!-- ================= COMPLIANCE ================= -->
+<!-- ================= COMPLIANCE ================= -->
   <section class="block reveal" id="compliance">
     <div class="sec-head">
       <div>
@@ -838,11 +1148,103 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
     </div>
     <div class="comp" id="compGrid"></div>
   </section>
+  </div>
 
   <footer>
     <span>APAAR registry prototype · Not an official Government of India website</span>
     <div><span>DPDP Act 2023 Compliant</span><span>AICTE Central Repository Integration</span><span>DigiLocker NAD Verified</span></div>
   </footer>
+</div>
+
+
+<!-- ================= LOGIN MODAL (DARK PALAIYA UI/UX) ================= -->
+<div class="overlay" id="loginModal">
+  <div class="modal" style="max-width: 640px;">
+    <div class="modal-head">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <svg class="logo-mark" viewBox="0 0 42 42" fill="none" style="width: 36px; height: 36px;">
+          <defs><linearGradient id="lgLog" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3a5bd9"/><stop offset="1" stop-color="#c86bff"/></linearGradient></defs>
+          <circle cx="21" cy="21" r="19" stroke="url(#lgLog)" stroke-width="2"/>
+          <circle cx="21" cy="21" r="13" stroke="url(#lgLog)" stroke-width="1.5" opacity=".7"/>
+          <circle cx="21" cy="21" r="7" stroke="url(#lgLog)" stroke-width="1.2" opacity=".5"/>
+          <text x="21" y="26" text-anchor="middle" font-family="Poppins" font-weight="800" font-size="14" fill="#fff">A</text>
+        </svg>
+        <div>
+          <h3>Sign In to APAAR Secure Vault</h3>
+          <small>Automated Permanent Academic Account Registry · Ministry of Education</small>
+        </div>
+      </div>
+      <button class="icon-btn" onclick="closeModal('loginModal')" title="Continue as Guest">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <div style="font-size: 12px; color: var(--dim); margin-bottom: 2px;">
+        Select your role for 1-Click instant sign-in or enter credentials:
+      </div>
+
+      <!-- Role Selector Tabs -->
+      <div class="login-roles-grid" id="loginRoleTabs">
+        <div class="login-role-card sel" data-role="student" onclick="selectLoginRole('student')">
+          <div class="role-icon-box" style="background: rgba(34,211,154,.15); color: var(--ok);">🎓</div>
+          <b>Student</b>
+          <small>Abinaya S</small>
+        </div>
+        <div class="login-role-card" data-role="hr" onclick="selectLoginRole('hr')">
+          <div class="role-icon-box" style="background: rgba(200,107,255,.15); color: var(--violet);">🏢</div>
+          <b>Company HR</b>
+          <small>Vikram S</small>
+        </div>
+        <div class="login-role-card" data-role="college" onclick="selectLoginRole('college')">
+          <div class="role-icon-box" style="background: rgba(26,163,255,.15); color: var(--cyan);">🏛</div>
+          <b>College Dean</b>
+          <small>Dr. Ravichandran</small>
+        </div>
+        <div class="login-role-card" data-role="auditor" onclick="selectLoginRole('auditor')">
+          <div class="role-icon-box" style="background: rgba(255,181,71,.15); color: var(--warn);">⚖️</div>
+          <b>Regulator</b>
+          <small>P. K. Meena</small>
+        </div>
+      </div>
+
+      <!-- Role Profile Summary Box -->
+      <div class="box" id="loginProfileBox">
+        <div class="kv">Active Persona: <b class="grad-text" id="loginSelectedName">Abinaya S</b></div>
+        <div class="kv">Organization: <b id="loginSelectedOrg">Govt. College of Technology, Coimbatore</b></div>
+        <div class="kv">Identifier: <b class="mono" id="loginSelectedId">2990 9583 2586 (APAAR ID)</b></div>
+        <div class="kv">Workspace Target: <b style="color: var(--ok);" id="loginSelectedPerm">Student Sovereign Vault &amp; Consent Manager</b></div>
+      </div>
+
+      <!-- 1-Click Instant Sign In Button -->
+      <button class="btn btn-cyan" id="loginInstantBtn" onclick="executeLogin(currentLoginRoleKey)" style="width: 100%; justify-content: center; padding: 13px; font-size: 13px;">
+        ⚡ 1-Click Instant Sign In as Student
+      </button>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin: 4px 0;">
+        <div style="flex: 1; height: 1px; background: var(--line);"></div>
+        <span style="font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px;">Or Password Sign In</span>
+        <div style="flex: 1; height: 1px; background: var(--line);"></div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="field">
+          <label id="loginInputLabel">Email or 12-Digit APAAR ID</label>
+          <input id="loginInputUser" class="mono" value="abinaya.attur@student.example.edu.in" />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input id="loginInputPass" type="password" value="Apaar@2026" />
+        </div>
+        <button class="btn btn-blue" onclick="executePasswordLogin()" style="width: 100%; justify-content: center; padding: 12px;">
+          Sign In with Password →
+        </button>
+      </div>
+    </div>
+
+    <div class="modal-foot" style="justify-content: space-between; align-items: center;">
+      <span style="font-size: 11.5px; color: var(--muted);">Demo credentials ready · Prototype mode</span>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal('loginModal')">Explore Portal as Guest →</button>
+    </div>
+  </div>
 </div>
 
 <!-- ================= CONSENT MODAL ================= -->
@@ -1039,7 +1441,92 @@ const compliance = [
    ========================================================= */
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
-function go(h){ document.querySelector(h).scrollIntoView({behavior:'smooth'}); closeNav(); }
+/* =========================================================
+   ROUTING & VIEW MANAGEMENT (Separate Menu & Landing Page)
+   ========================================================= */
+const VIEW_MAP = {
+  landing: 'view-landing',
+  top: 'view-landing',
+  home: 'view-landing',
+  hr: 'view-hr',
+  ocr: 'view-ocr',
+  upload: 'view-ocr',
+  vault: 'view-vault',
+  registry: 'view-registry',
+  audit: 'view-audit',
+  compliance: 'view-compliance'
+};
+
+function activateViewReveals(target) {
+  if (!target) return;
+  target.querySelectorAll('.reveal').forEach(el => {
+    el.classList.add('in');
+    el.querySelectorAll('.bar i').forEach(b => {
+      if (b.dataset.w) b.style.width = b.dataset.w + '%';
+    });
+    el.querySelectorAll('[data-count]').forEach(n => {
+      if (!n.dataset.counted) {
+        n.dataset.counted = 'true';
+        const end = +n.dataset.count;
+        let v = 0;
+        const iv = setInterval(() => {
+          v++;
+          n.textContent = v;
+          if (v >= end) clearInterval(iv);
+        }, Math.max(12, 600 / end));
+      }
+    });
+  });
+}
+
+function switchView(viewKey, pushHistory = true) {
+  const cleanKey = (viewKey || '').replace('#', '').toLowerCase();
+  const targetId = VIEW_MAP[cleanKey] || 'view-landing';
+
+  document.querySelectorAll('.app-view').forEach(v => {
+    v.style.display = 'none';
+  });
+
+  const target = document.getElementById(targetId);
+  if (target) {
+    target.style.display = 'block';
+    activateViewReveals(target);
+  }
+
+  document.querySelectorAll('.nav-links a').forEach(a => {
+    const hrefKey = (a.getAttribute('href') || '').replace('#', '').toLowerCase();
+    const isLanding = (cleanKey === 'landing' || cleanKey === 'top' || cleanKey === 'home' || !cleanKey) && hrefKey === 'landing';
+    const isMatch = hrefKey === cleanKey || (cleanKey === 'upload' && hrefKey === 'ocr') || isLanding;
+    a.classList.toggle('active', isMatch);
+  });
+
+  if (pushHistory) {
+    try {
+      history.pushState(null, '', '#' + (cleanKey === 'top' || !cleanKey ? 'landing' : cleanKey));
+    } catch (e) {}
+  }
+
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function go(h) {
+  const clean = (h || '').replace('#', '').toLowerCase() || 'landing';
+  if (clean === 'how') {
+    switchView('landing', false);
+    setTimeout(() => {
+      const el = document.getElementById('how');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 120);
+  } else {
+    switchView(clean);
+  }
+  closeNav();
+}
+
+window.addEventListener('hashchange', () => {
+  const h = window.location.hash.replace('#', '') || 'landing';
+  go('#' + h);
+});
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600); }
 function nowIST(){ return new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZone:'Asia/Kolkata'}).replace(',',''); }
 function fakeHash(s){ let h=2166136261; for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)} let out=''; for(let i=0;i<8;i++){h=Math.imul(h^(h>>>13),1597334677); out+=((h>>>0).toString(16)).padStart(8,'0').slice(0,8)} return out; }
@@ -1052,13 +1539,187 @@ const burger=$('#burger'), links=$('#navLinks');
 burger.onclick=()=>{burger.classList.toggle('open');links.classList.toggle('open')};
 function closeNav(){burger.classList.remove('open');links.classList.remove('open')}
 
+
+/* =========================================================
+   USER PROFILES & COMPLETE STATE MANAGEMENT
+   ========================================================= */
+const USER_PROFILES = {
+  student: {
+    key: 'student',
+    av: 'A',
+    name: 'Abinaya S',
+    role: 'Student',
+    email: 'abinaya.attur@student.example.edu.in',
+    org: 'Govt. College of Technology, Coimbatore',
+    id: '2990 9583 2586',
+    pen: '20194817290',
+    designation: 'B.Tech Information Technology (Final Year)',
+    district: 'Salem',
+    stage: 'Graduated',
+    targetView: 'vault',
+    badgeText: 'Student Locker Active'
+  },
+  hr: {
+    key: 'hr',
+    av: 'V',
+    name: 'Vikramaditya Sharma',
+    role: 'Company HR',
+    email: 'v.sharma@nimbus.example.com',
+    org: 'Nimbus Tech Services',
+    designation: 'Senior Talent Acquisition & Compliance Officer',
+    id: 'EMP-NTS-8192',
+    pen: '—',
+    district: 'Chennai',
+    stage: 'Corporate Recruiter',
+    targetView: 'hr',
+    badgeText: 'HR Verifier Active'
+  },
+  college: {
+    key: 'college',
+    av: 'D',
+    name: 'Dr. K. Ravichandran',
+    role: 'College',
+    email: 'registrar@annauniv.example.edu',
+    org: 'Anna University, Guindy Campus',
+    designation: 'Dean of Academic Courses & NAD Controller',
+    id: 'INST-AU-CHENNAI',
+    pen: '—',
+    district: 'Chennai',
+    stage: 'Higher Education Institution',
+    targetView: 'registry',
+    badgeText: 'College Registrar'
+  },
+  auditor: {
+    key: 'auditor',
+    av: 'P',
+    name: 'P. K. Meena',
+    role: 'Auditor',
+    email: 'compliance@aicte.example.gov.in',
+    org: 'Ministry of Education & AICTE Audit Bureau',
+    designation: 'Director of National Academic Credentials Registry',
+    id: 'REG-AICTE-01',
+    pen: '—',
+    district: 'New Delhi',
+    stage: 'Statutory Regulator',
+    targetView: 'audit',
+    badgeText: 'AICTE Regulator'
+  }
+};
+
+let currentLoginRoleKey = 'student';
+let activeUser = USER_PROFILES.student;
+
+function selectLoginRole(roleKey) {
+  currentLoginRoleKey = roleKey;
+  const p = USER_PROFILES[roleKey];
+  $('#loginRoleTabs .login-role-card').forEach(c => c.classList.toggle('sel', c.dataset.role === roleKey));
+  $('#loginSelectedName').textContent = p.name;
+  $('#loginSelectedOrg').textContent = p.org;
+  $('#loginSelectedId').textContent = p.id;
+  $('#loginSelectedPerm').textContent = p.role + ' Workspace (' + p.targetView.toUpperCase() + ')';
+  $('#loginInstantBtn').textContent = '⚡ 1-Click Instant Sign In as ' + p.role;
+  $('#loginInputUser').value = p.email;
+}
+
+function executeLogin(roleKey) {
+  const p = USER_PROFILES[roleKey] || USER_PROFILES.student;
+  applyUserProfile(p, true);
+  closeModal('loginModal');
+  toast('✓ Welcome back, ' + p.name + ' (' + p.role + ')!');
+}
+
+function executePasswordLogin() {
+  executeLogin(currentLoginRoleKey);
+}
+
+function openLoginModal() {
+  $('#loginModal').classList.add('show');
+  selectLoginRole(activeUser ? activeUser.key : 'student');
+  closeUserDropdown();
+}
+
+function toggleUserDropdown(e) {
+  e.stopPropagation();
+  $('#userDropdown').classList.toggle('show');
+}
+
+function closeUserDropdown() {
+  const dd = $('#userDropdown');
+  if (dd) dd.classList.remove('show');
+}
+document.addEventListener('click', () => closeUserDropdown());
+
+function switchUserRole(roleKey) {
+  closeUserDropdown();
+  const p = USER_PROFILES[roleKey];
+  if (p) {
+    applyUserProfile(p, true);
+  }
+}
+
+function applyUserProfile(profile, switchWorkspace = true) {
+  activeUser = profile;
+  sessionStorage.setItem('apaar_auth_user', profile.key);
+
+  // 1. Update Navbar Chip
+  $('#userAv').textContent = profile.av;
+  $('#userName').textContent = profile.name.split(' ')[0];
+  $('#userRole').textContent = profile.role;
+
+  // 2. Update User Dropdown Header
+  if ($('#ddName')) $('#ddName').textContent = profile.name;
+  if ($('#ddRole')) $('#ddRole').textContent = profile.role + ' · ' + profile.org;
+  if ($('#ddId')) $('#ddId').textContent = 'ID: ' + profile.id;
+
+  // 3. Update 1-Click Role Switcher Bar Buttons
+  $('.role-btn').forEach(b => b.classList.toggle('active', b.dataset.role === profile.key));
+
+  // 4. Update Smart Card & Candidate Details
+  if (profile.key === 'student') {
+    $('#cardId').textContent = profile.id;
+    $('#cardName').textContent = profile.name;
+    $('#cardInst').textContent = profile.org;
+  } else if (profile.key === 'hr') {
+    $('#cardId').textContent = '2990 9583 2586';
+    $('#cardName').textContent = 'Abinaya S (Candidate)';
+    $('#cardInst').textContent = 'Verified by: ' + profile.org;
+  } else if (profile.key === 'college') {
+    $('#cardId').textContent = 'AU-2026-9042';
+    $('#cardName').textContent = profile.name + ' (Dean)';
+    $('#cardInst').textContent = profile.org;
+  } else {
+    $('#cardId').textContent = 'NAD-REG-2026';
+    $('#cardName').textContent = profile.name;
+    $('#cardInst').textContent = profile.org;
+  }
+
+  // 5. Update HR Verify Form Inputs
+  if ($('#bgvHr')) $('#bgvHr').value = profile.key === 'hr' ? profile.name : 'Vikramaditya Sharma';
+  if ($('#bgvOrg')) $('#bgvOrg').value = profile.key === 'hr' ? profile.org : 'Nimbus Tech Services';
+
+  // 6. Record in Audit Log
+  addAudit(
+    profile.name + ' (' + profile.role.toUpperCase() + ')',
+    profile.key === 'student' ? 'STUDENT' : profile.key === 'hr' ? 'EMPLOYER' : 'SYSTEM',
+    'PREFERENCES_UPDATED',
+    'ok',
+    profile.id || 'AUTH_GATEWAY',
+    'Session activated for ' + profile.name + ' (' + profile.role + ') at ' + profile.org + '. IP: 127.0.0.1.'
+  );
+
+  toast('Active user: ' + profile.name + ' (' + profile.role + ')');
+
+  if (switchWorkspace && profile.targetView) {
+    go('#' + profile.targetView);
+  }
+}
+
 /* role switch */
-const roles={hr:['V','Vikram','Company HR'],student:['A','Abinaya','Student'],college:['D','Dr. Meena','College'],auditor:['P','P. Ravi','Auditor']};
-$$('.role-btn').forEach(b=>b.onclick=()=>{
-  $$('.role-btn').forEach(x=>x.classList.remove('active')); b.classList.add('active');
-  const [av,n,r]=roles[b.dataset.role]; $('#userAv').textContent=av; $('#userName').textContent=n; $('#userRole').textContent=r;
-  addAudit(n+' ('+r.toUpperCase()+')',b.dataset.role==='student'?'STUDENT':'EMPLOYER','PREFERENCES_UPDATED','ok','AUTH_GATEWAY','Signed in via 1-Click Prototype Role Switch. IP: 127.0.0.1.');
-  toast('Switched role → '+r);
+$('.role-btn').forEach(b => b.onclick = () => {
+  const p = USER_PROFILES[b.dataset.role];
+  if (p) {
+    applyUserProfile(p, true);
+  }
 });
 
 /* =========================================================
@@ -1318,6 +1979,18 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.overlay').forEa
 
 /* INIT */
 renderBgv();renderOcr();renderBatch('valid');renderRequests();renderHistory();renderAudit();
+
+// Restore user from session or open Login Modal on first launch
+const savedUserKey = sessionStorage.getItem('apaar_auth_user');
+if (savedUserKey && USER_PROFILES[savedUserKey]) {
+  applyUserProfile(USER_PROFILES[savedUserKey], false);
+} else {
+  // App open panna udane login page mari kondu va
+  openLoginModal();
+}
+
+const initialHash = window.location.hash.replace('#', '') || 'landing';
+go('#' + initialHash);
 </script>
 </body>
 </html>
