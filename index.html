@@ -1001,6 +1001,8 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
         <div class="preset-row">
           <button class="btn btn-ok btn-sm" data-batch="valid">Load Valid Batch (Passes 5/5)</button>
           <button class="btn btn-bad btn-sm" data-batch="errors">Trigger All 5 Checks (Demo Errors)</button>
+          <button class="btn btn-cyan btn-sm" onclick="$('#csvFileInput').click()">📂 Upload CSV File</button>
+          <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none" onchange="handleCsvUpload(event)" />
           <button class="btn btn-ghost btn-sm" onclick="downloadTemplate()">⭳ Excel/CSV Template</button>
         </div>
         <div class="table-wrap">
@@ -1069,10 +1071,37 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
         <h2>National APAAR Registry</h2>
         <p>Search, filter, and onboard student records with tamper-proof 12-digit APAAR IDs and APAAR Secure Vault credentials.</p>
       </div>
-      <button class="btn btn-blue" onclick="toast('Register New Student form opened (demo)')">+ Register New Student</button>
+      <button class="btn btn-blue" onclick="openStudentModal()">+ Register New Student</button>
     </div>
 
-    <div class="table-wrap" style="margin-top:22px">
+    <div class="filters" style="margin-top:20px;margin-bottom:14px">
+      <div class="field" style="flex:2">
+        <label>Search National Registry</label>
+        <input id="registrySearch" placeholder="Search by Student Name, 12-Digit APAAR ID, Institution, or District..." oninput="filterRegistry()" />
+      </div>
+      <div class="field" style="flex:1">
+        <label>Stage Filter</label>
+        <select id="regStageFilter" onchange="filterRegistry()">
+          <option value="">All Stages</option>
+          <option value="UG">Undergraduate (UG)</option>
+          <option value="PG">Postgraduate (PG)</option>
+          <option value="Higher Secondary">Higher Secondary</option>
+          <option value="Secondary">Secondary</option>
+          <option value="Graduated">Graduated</option>
+        </select>
+      </div>
+      <div class="field" style="flex:1">
+        <label>Status Filter</label>
+        <select id="regStatusFilter" onchange="filterRegistry()">
+          <option value="">All Statuses</option>
+          <option value="Active">Active</option>
+          <option value="Graduated">Graduated</option>
+          <option value="Dropped out">Dropped out</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-wrap">
       <table>
         <thead><tr><th>APAAR ID</th><th>Student</th><th>Stage</th><th>Current Institution</th><th>District</th><th>Status</th><th>Actions</th></tr></thead>
         <tbody id="studentRows"></tbody>
@@ -1340,6 +1369,81 @@ footer div{display:flex;gap:18px;flex-wrap:wrap}
   </div>
 </div>
 
+<!-- ================= REGISTER STUDENT MODAL ================= -->
+<div class="overlay" id="studentModal">
+  <div class="modal" style="max-width: 640px;">
+    <div class="modal-head">
+      <div>
+        <h3>Register New Student in APAAR Registry</h3>
+        <small>National Academic Account Onboarding · MoE &amp; AICTE</small>
+      </div>
+      <button class="icon-btn" onclick="closeModal('studentModal')">✕</button>
+    </div>
+    <form id="studentRegisterForm" onsubmit="handleRegisterStudent(event)">
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:14px">
+        <div class="field">
+          <label>Full Student Name *</label>
+          <input id="newStdName" placeholder="e.g. Priyadharshini K" required />
+        </div>
+        <div class="two" style="gap:12px">
+          <div class="field">
+            <label>12-Digit APAAR ID *</label>
+            <div style="display:flex;gap:8px">
+              <input id="newStdId" class="mono" placeholder="XXXX XXXX XXXX" maxlength="14" required />
+              <button type="button" class="btn btn-ghost btn-sm" onclick="generateRandomApaarId()" title="Generate Random 12-Digit APAAR ID" style="white-space:nowrap">⚡ Gen ID</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Date of Birth</label>
+            <input id="newStdDob" type="text" placeholder="e.g. 14 May 2004" />
+          </div>
+        </div>
+        <div class="two" style="gap:12px">
+          <div class="field">
+            <label>Academic Stage / Level *</label>
+            <select id="newStdStage">
+              <option value="UG" selected>Undergraduate (UG)</option>
+              <option value="PG">Postgraduate (PG)</option>
+              <option value="Higher Secondary">Higher Secondary (Class 11-12)</option>
+              <option value="Secondary">Secondary (Class 9-10)</option>
+              <option value="Graduated">Graduated / Alumni</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>District *</label>
+            <select id="newStdDistrict">
+              <option value="Chennai" selected>Chennai</option>
+              <option value="Coimbatore">Coimbatore</option>
+              <option value="Salem">Salem</option>
+              <option value="Madurai">Madurai</option>
+              <option value="Tiruchirappalli">Tiruchirappalli</option>
+              <option value="Erode">Erode</option>
+              <option value="Thanjavur">Thanjavur</option>
+              <option value="The Nilgiris">The Nilgiris</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>College / University / School Name *</label>
+          <input id="newStdInst" placeholder="e.g. National Institute of Technology, Trichy" required />
+        </div>
+        <div class="field">
+          <label>Initial Enrollment Status</label>
+          <select id="newStdStatus">
+            <option value="Active" selected>Active (Currently Studying)</option>
+            <option value="Graduated">Graduated</option>
+            <option value="Enrolled">Enrolled</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-foot" style="justify-content:flex-end;gap:10px">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('studentModal')">Cancel</button>
+        <button type="submit" class="btn btn-blue">✓ Register &amp; Seal Record</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1530,7 +1634,8 @@ window.addEventListener('hashchange', () => {
 function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2600); }
 function nowIST(){ return new Date().toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false,timeZone:'Asia/Kolkata'}).replace(',',''); }
 function fakeHash(s){ let h=2166136261; for(const c of s){h^=c.charCodeAt(0);h=Math.imul(h,16777619)} let out=''; for(let i=0;i<8;i++){h=Math.imul(h^(h>>>13),1597334677); out+=((h>>>0).toString(16)).padStart(8,'0').slice(0,8)} return out; }
-function closeModal(id){ $('#'+id).classList.remove('show'); }
+function closeModal(id){ const el=$('#'+id); if(el) el.classList.remove('show'); }
+function openModal(id){ const el=$('#'+id); if(el) el.classList.add('show'); }
 function openCert(){ $('#certModal').classList.add('show'); }
 function flip(){ $('#smart').classList.toggle('flipped'); }
 
@@ -1538,6 +1643,13 @@ function flip(){ $('#smart').classList.toggle('flipped'); }
 const burger=$('#burger'), links=$('#navLinks');
 burger.onclick=()=>{burger.classList.toggle('open');links.classList.toggle('open')};
 function closeNav(){burger.classList.remove('open');links.classList.remove('open')}
+$$('#navLinks a').forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    const href = a.getAttribute('href');
+    go(href);
+  });
+});
 
 
 /* =========================================================
@@ -1612,7 +1724,7 @@ let activeUser = USER_PROFILES.student;
 function selectLoginRole(roleKey) {
   currentLoginRoleKey = roleKey;
   const p = USER_PROFILES[roleKey];
-  $('#loginRoleTabs .login-role-card').forEach(c => c.classList.toggle('sel', c.dataset.role === roleKey));
+  $$('#loginRoleTabs .login-role-card').forEach(c => c.classList.toggle('sel', c.dataset.role === roleKey));
   $('#loginSelectedName').textContent = p.name;
   $('#loginSelectedOrg').textContent = p.org;
   $('#loginSelectedId').textContent = p.id;
@@ -1629,7 +1741,25 @@ function executeLogin(roleKey) {
 }
 
 function executePasswordLogin() {
-  executeLogin(currentLoginRoleKey);
+  const input = ($('#loginInputUser')?.value || '').trim().toLowerCase();
+  const digits = input.replace(/\s/g, '');
+  let matchedKey = null;
+
+  for (const [key, profile] of Object.entries(USER_PROFILES)) {
+    if (
+      profile.email.toLowerCase() === input ||
+      profile.id.replace(/\s/g, '').toLowerCase() === digits ||
+      profile.name.toLowerCase().includes(input) ||
+      key === input ||
+      profile.role.toLowerCase() === input
+    ) {
+      matchedKey = key;
+      break;
+    }
+  }
+
+  const chosenKey = matchedKey || currentLoginRoleKey;
+  executeLogin(chosenKey);
 }
 
 function openLoginModal() {
@@ -1672,7 +1802,7 @@ function applyUserProfile(profile, switchWorkspace = true) {
   if ($('#ddId')) $('#ddId').textContent = 'ID: ' + profile.id;
 
   // 3. Update 1-Click Role Switcher Bar Buttons
-  $('.role-btn').forEach(b => b.classList.toggle('active', b.dataset.role === profile.key));
+  $$('.role-btn').forEach(b => b.classList.toggle('active', b.dataset.role === profile.key));
 
   // 4. Update Smart Card & Candidate Details
   if (profile.key === 'student') {
@@ -1715,7 +1845,7 @@ function applyUserProfile(profile, switchWorkspace = true) {
 }
 
 /* role switch */
-$('.role-btn').forEach(b => b.onclick = () => {
+$$('.role-btn').forEach(b => b.onclick = () => {
   const p = USER_PROFILES[b.dataset.role];
   if (p) {
     applyUserProfile(p, true);
@@ -1761,16 +1891,139 @@ res.addEventListener('click',e=>{
 document.addEventListener('click',e=>{if(!e.target.closest('.search'))res.classList.remove('show')});
 
 /* =========================================================
-   REGISTRY TABLE
+   REGISTRY TABLE & ONBOARDING
    ========================================================= */
 function statusChip(s){const m={Graduated:'info',Active:'ok','Dropped out':'bad'};return `<span class="chip ${m[s]||'info'}">● ${s}</span>`}
-$('#studentRows').innerHTML=students.map(s=>`<tr>
-  <td class="apaar">${s.id}</td>
-  <td><b>${s.name}</b>${s.dob?`<span class="sub">${s.dob}</span>`:''}</td>
-  <td>${s.stage}</td><td>${s.inst}</td><td>${s.district}</td>
-  <td>${statusChip(s.status)} ${s.mismatch?'<br><span class="chip warn" style="margin-top:5px">● Mismatch</span>':''}</td>
-  <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="$('#bgvId').value='${s.id}';go('#hr')">Verify Student</button></td>
-</tr>`).join('');
+
+function renderStudentsTable(query = '', stageFilter = '', statusFilter = '') {
+  const q = (query || '').trim().toLowerCase();
+  const digits = q.replace(/\s/g, '');
+  const stage = (stageFilter || '').toLowerCase();
+  const st = (statusFilter || '').toLowerCase();
+
+  const filtered = students.filter(s => {
+    const matchQ = !q || (
+      s.name.toLowerCase().includes(q) ||
+      s.id.replace(/\s/g, '').includes(digits) ||
+      s.inst.toLowerCase().includes(q) ||
+      s.district.toLowerCase().includes(q) ||
+      s.stage.toLowerCase().includes(q)
+    );
+    const matchStage = !stage || s.stage.toLowerCase().includes(stage);
+    const matchStatus = !st || s.status.toLowerCase() === st;
+    return matchQ && matchStage && matchStatus;
+  });
+
+  const tbody = $('#studentRows');
+  if (!tbody) return;
+  if (!filtered.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:30px">No students match your filter criteria.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtered.map(s => `<tr>
+    <td class="apaar">${s.id}</td>
+    <td><b>${s.name}</b>${s.dob ? `<span class="sub">${s.dob}</span>` : ''}</td>
+    <td>${s.stage}</td><td>${s.inst}</td><td>${s.district}</td>
+    <td>${statusChip(s.status)} ${s.mismatch ? '<br><span class="chip warn" style="margin-top:5px">● Mismatch</span>' : ''}</td>
+    <td style="white-space:nowrap"><button class="btn btn-ghost btn-sm" onclick="$('#bgvId').value='${s.id}';go('#hr')">Verify Student</button></td>
+  </tr>`).join('');
+}
+
+function filterRegistry() {
+  const q = $('#registrySearch')?.value || '';
+  const stage = $('#regStageFilter')?.value || '';
+  const st = $('#regStatusFilter')?.value || '';
+  renderStudentsTable(q, stage, st);
+}
+
+function openStudentModal() {
+  openModal('studentModal');
+  if (!$('#newStdId').value) {
+    generateRandomApaarId();
+  }
+}
+
+function generateRandomApaarId() {
+  const p1 = Math.floor(1000 + Math.random() * 9000);
+  const p2 = Math.floor(1000 + Math.random() * 9000);
+  const p3 = Math.floor(1000 + Math.random() * 9000);
+  const val = `${p1} ${p2} ${p3}`;
+  const input = $('#newStdId');
+  if (input) input.value = val;
+  return val;
+}
+
+$('#newStdId')?.addEventListener('input', e => {
+  let v = e.target.value.replace(/\D/g, '').slice(0, 12);
+  e.target.value = v.replace(/(\d{4})(?=\d)/g, '$1 ');
+});
+
+function handleRegisterStudent(e) {
+  e.preventDefault();
+  const name = ($('#newStdName')?.value || '').trim();
+  const idRaw = ($('#newStdId')?.value || '').trim();
+  const digits = idRaw.replace(/\s/g, '');
+  const dob = ($('#newStdDob')?.value || '').trim() || '15 Jun 2004';
+  const stage = $('#newStdStage')?.value || 'UG';
+  const district = $('#newStdDistrict')?.value || 'Chennai';
+  const inst = ($('#newStdInst')?.value || '').trim() || 'State Technical University';
+  const status = $('#newStdStatus')?.value || 'Active';
+
+  if (!name) {
+    toast('⚠ Student name is required');
+    return;
+  }
+  if (digits.length !== 12) {
+    toast('⚠ APAAR ID must be exactly 12 digits');
+    return;
+  }
+
+  const formattedId = digits.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3');
+
+  if (students.some(s => s.id.replace(/\s/g, '') === digits)) {
+    toast('⚠ A student with APAAR ID ' + formattedId + ' is already registered');
+    return;
+  }
+
+  const newStudent = { id: formattedId, name, dob, stage, inst, district, status };
+  students.unshift(newStudent);
+
+  filterRegistry();
+  updateRegistryCharts(stage, district);
+
+  addAudit(
+    (activeUser ? activeUser.name : 'College Registrar') + ' (' + (activeUser ? activeUser.role.toUpperCase() : 'COLLEGE') + ')',
+    'SYSTEM',
+    'STUDENT_REGISTERED',
+    'ok',
+    formattedId,
+    `New student ${name} registered in ${stage} at ${inst} (${district}). Cryptographic record sealed.`,
+    'REG-' + Math.floor(1000 + Math.random() * 9000)
+  );
+
+  closeModal('studentModal');
+  if (e && e.target && typeof e.target.reset === 'function') e.target.reset();
+  const form = $('#studentRegisterForm'); if (form) form.reset();
+  toast('✓ ' + name + ' registered successfully with APAAR ID: ' + formattedId);
+}
+
+function updateRegistryCharts(newStage, newDistrict) {
+  const stageEntry = stageData.find(s => s[0].toLowerCase() === newStage.toLowerCase() || (newStage === 'UG' && s[0] === 'UG') || (newStage === 'PG' && s[0] === 'PG'));
+  if (stageEntry) {
+    stageEntry[1]++;
+  } else {
+    stageData.push([newStage, 1]);
+  }
+  bars($('#stageBars'), stageData, 'linear-gradient(90deg,#3a5bd9,#c86bff)');
+
+  const distEntry = districtData.find(d => d[0].toLowerCase() === newDistrict.toLowerCase());
+  if (distEntry) {
+    distEntry[1]++;
+  } else {
+    districtData.push([newDistrict, 1]);
+  }
+  bars($('#districtBars'), districtData, 'linear-gradient(90deg,#1aa3ff,#22d39a)');
+}
 
 /* =========================================================
    STEPPER
@@ -1869,6 +2122,84 @@ $('#commitBtn').onclick=()=>{
 function downloadTemplate(){
   const csv='apaar_id,student_id,name,dob,institution,stage,programme,quota,nationality,category\n6190 4821 7734,AU-2026-8101,Nithya Subramanian,2004-07-19,Anna University,UG,B.Tech AI & DS,GENERAL_MERIT,Indian,OBC\n';
   dl('apaar_upload_template.csv',csv,'text/csv');
+}
+
+function handleCsvUpload(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const text = e.target.result;
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (lines.length <= 1) {
+        toast('⚠ CSV file contains no data rows');
+        return;
+      }
+
+      const dataRows = lines[0].toLowerCase().includes('apaar') ? lines.slice(1) : lines;
+      const rows = [];
+      const violations = [];
+      let flagDuplicate = 0;
+      let flagMissingId = 0;
+      let flagCap = 0;
+      let flagDemographic = 0;
+      let flagCross = 0;
+
+      const seenIds = new Set();
+
+      dataRows.forEach((line, idx) => {
+        const parts = line.split(',').map(s => s.trim().replace(/^["']|["']$/g, ''));
+        const apaarRaw = parts[0] || '';
+        const digits = apaarRaw.replace(/\s/g, '');
+        const studentId = parts[1] || `CSV-STD-${100 + idx}`;
+        const name = parts[2] || `Student #${idx + 1}`;
+        const dob = parts[3] || '2004-05-15';
+        const inst = parts[4] || 'Anna University, Guindy Campus';
+        const stage = parts[5] || 'UG';
+        const prog = parts[6] || 'B.Tech IT';
+        const quota = parts[7] || 'GENERAL_MERIT';
+        const category = parts[8] || 'Indian · Cat: OPEN';
+
+        let isValidApaar = /^\d{12}$/.test(digits);
+        let displayApaar = isValidApaar ? digits.replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3') : (apaarRaw || 'ERR-APAAR');
+
+        if (!isValidApaar) {
+          flagMissingId++;
+          violations.push([`Rule #2: Invalid APAAR ID in Row ${idx + 1}`, displayApaar, `"${apaarRaw}" does not conform to 12-digit numeric NAD format.`]);
+        }
+
+        if (seenIds.has(digits)) {
+          flagDuplicate++;
+          violations.push([`Rule #1: Duplicate ID in Staged Batch`, displayApaar, `APAAR ID ${displayApaar} occurs multiple times within this batch.`]);
+        } else if (isValidApaar) {
+          seenIds.add(digits);
+        }
+
+        rows.push([
+          displayApaar,
+          studentId,
+          name,
+          dob,
+          inst,
+          `${stage} · ${prog}`,
+          quota,
+          category
+        ]);
+      });
+
+      const flags = [flagDuplicate, flagMissingId, flagCap, flagDemographic, flagCross];
+      batches.custom = { rows, flags, violations };
+
+      renderBatch('custom');
+      toast(`✓ Parsed & evaluated ${rows.length} records from ${file.name}`);
+    } catch (err) {
+      console.error(err);
+      toast('⚠ Failed to parse CSV file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
 }
 function dl(name,content,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
 
@@ -1978,7 +2309,7 @@ $$('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.class
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$$('.overlay').forEach(o=>o.classList.remove('show'))});
 
 /* INIT */
-renderBgv();renderOcr();renderBatch('valid');renderRequests();renderHistory();renderAudit();
+renderBgv();renderOcr();renderBatch('valid');renderRequests();renderHistory();renderAudit();renderStudentsTable();
 
 // Restore user from session or open Login Modal on first launch
 const savedUserKey = sessionStorage.getItem('apaar_auth_user');
